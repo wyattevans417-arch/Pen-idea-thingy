@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infini Pen 3D Configurator</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; width: 100%; height: 100%; overflow: hidden;
+      background: #3a3a3a; color: #fff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #scene { position: fixed; inset: 0; }
+    .controls {
+      position: fixed; right: 22px; top: 22px; z-index: 5;
+      display: grid; gap: 10px;
+    }
+    button {
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.14);
+      color: #fff; min-width: 148px;
+      padding: 12px 15px; border-radius: 999px;
+      font-weight: 800; cursor: pointer;
+      box-shadow: 0 12px 34px rgba(0,0,0,.22);
+    }
+    button:hover { background: rgba(255,255,255,.22); }
+    .buy-button { background:#050505; color:#f5d27b; border-color:rgba(255,220,150,.55); }
+    .hint {
+      position: fixed; right: 22px; bottom: 18px;
+      color: rgba(255,255,255,.55); font-size: 12px;
+      letter-spacing:.08em; text-transform:uppercase; pointer-events:none;
+    }
+    .fact {
+      position: fixed; left: 24px; top: 50%;
+      transform: translateY(-50%) translateX(-18px);
+      width: min(430px, calc(100vw - 48px));
+      padding: 26px 28px; border-radius: 28px;
+      background: rgba(18,18,18,.62);
+      border: 1px solid rgba(255,220,150,.32);
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity .26s ease, transform .26s ease;
+      z-index: 4;
+    }
+    .fact.visible { opacity: 1; transform: translateY(-50%) translateX(0); }
+    .fact h2 { margin: 0 0 14px; color:#f1c86c; font-size:28px; line-height:1.12; }
+    .fact p { margin: 0 0 14px; color:rgba(255,255,255,.78); font-size:18px; line-height:1.48; }
+    .shop {
+      position: fixed; left: 22px; top: 22px; bottom: 22px;
+      width: min(430px, calc(100vw - 44px));
+      display: none; z-index: 20; color:#fff;
+    }
+    .shop.visible { display:block; }
+    .shop-card {
+      height: 100%; overflow:auto; display:grid; gap:16px;
+      padding:18px; border-radius:28px;
+      background: linear-gradient(145deg, rgba(28,28,28,.88), rgba(10,10,10,.76));
+      border: 1px solid rgba(255,255,255,.2);
+      box-shadow: 0 30px 90px rgba(0,0,0,.42);
+    }
+    .shop-hero {
+      padding:18px; border-radius:22px;
+      background: radial-gradient(circle at top, rgba(245,210,123,.18), rgba(0,0,0,.22) 52%, rgba(0,0,0,.34));
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .shop-hero h1 { margin:0 0 8px; font-size: clamp(30px, 4vw, 44px); line-height:.98; letter-spacing:-.05em; }
+    .shop-hero p, .fine { margin:0; color: rgba(255,255,255,.62); font-size: 12px; line-height:1.45; }
+    .price { margin-top:10px; font-size:40px; font-weight:900; color:#f5d27b; letter-spacing:-.04em; }
+    .row {
+      display:grid; gap:8px; padding:15px; border-radius:20px;
+      background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.12);
+    }
+    .row label { font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.62); }
+    select, input[type="text"], input[type="number"] {
+      width:100%; border:1px solid rgba(255,255,255,.18); border-radius:14px;
+      background:rgba(0,0,0,.32); color:white; padding:12px 13px; font-size:16px;
+    }
+    input[type="color"] {
+      width:100%; height:44px; padding:4px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.32);
+    }
+    .check { display:flex; justify-content:space-between; align-items:center; gap:14px; font-size:16px; }
+    .check input { width:22px; height:22px; accent-color:#f5d27b; }
+    .breakdown {
+      display:grid; gap:8px; padding:16px; border-radius:20px;
+      background:rgba(0,0,0,.28); border:1px solid rgba(255,220,150,.26);
+    }
+    .line { display:flex; justify-content:space-between; gap:18px; color:rgba(255,255,255,.76); font-size:15px; }
+    .line.total { padding-top:10px; border-top:1px solid rgba(255,255,255,.16); color:#f5d27b; font-size:21px; font-weight:900; }
+    .actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .primary { background:#f5d27b; color:#111; border:0; }
+    .secondary { background:rgba(255,255,255,.12); color:#fff; }
+    .checkout {
+      position: fixed; inset:0; z-index:40; display:none; place-items:center;
+      background:#3a3a3a; color:white; overflow:hidden; text-align:center;
+    }
+    .checkout.visible { display:grid; }
+    .checkout-close { position: fixed; right:22px; top:22px; z-index:42; }
+    .stage { width:min(920px, calc(100vw - 42px)); min-height:min(610px, calc(100vh - 42px)); display:grid; place-items:center; align-content:center; gap:18px; }
+    .stage h1 { margin:0; font-size:clamp(38px,6vw,78px); letter-spacing:-.06em; line-height:.95; }
+    .stage p { margin:0; color:rgba(255,255,255,.72); font-size:18px; }
+    .case {
+      position:relative; width:min(650px,86vw); height:300px;
+      border-radius:32px; background:linear-gradient(145deg,#1a1a1a,#050505);
+      border:4px solid #d5a73d;
+      box-shadow:0 30px 90px rgba(0,0,0,.48), inset 0 0 0 18px rgba(255,255,255,.035);
+      overflow:hidden; opacity:0; transform:translateY(24px) scale(.92);
+    }
+    .checkout.running .case { animation: caseArrive .9s ease forwards, casePack 1.4s ease 3.6s forwards; }
+    .foam { position:absolute; inset:26px; border-radius:24px; background:linear-gradient(135deg,#2a2a2a,#0d0d0d); }
+    .case-pen {
+      --pen-body:#111111; --pen-metal:#cfd3d6;
+      position:absolute; left:50%; top:48%; width:390px; height:24px; border-radius:999px;
+      background:linear-gradient(90deg,var(--pen-metal) 0 12%, var(--pen-body) 12% 78%, var(--pen-metal) 78% 100%);
+      border:2px solid rgba(255,255,255,.34); transform:translate(-50%,-240px) rotate(-8deg); opacity:0;
+    }
+    .checkout.running .case-pen { animation: penDrop 1.5s ease .7s forwards; }
+    .addons { position:absolute; left:50%; bottom:35px; transform:translateX(-50%); display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:88%; }
+    .chip { padding:8px 11px; border-radius:999px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); opacity:0; transform:translateY(-24px); font-size:13px; }
+    .checkout.running .chip { animation:addonDrop .6s ease forwards; }
+    .shipping { position:relative; width:min(680px,86vw); height:82px; opacity:0; }
+    .checkout.running .shipping { animation: shippingAppear .6s ease 5.2s forwards; }
+    .box { position:absolute; left:50%; top:15px; transform:translateX(-50%); padding:15px 30px; border-radius:14px; background:#b7813a; color:#221405; font-weight:900; }
+    .truck { position:absolute; left:-80px; top:22px; font-size:42px; }
+    .checkout.running .truck { animation:truckShip 2.4s ease-in-out 5.7s forwards; }
+    @keyframes caseArrive { to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes penDrop { 0%{opacity:0; transform:translate(-50%,-240px) rotate(-8deg);} 72%{opacity:1; transform:translate(-50%,-50%) rotate(-1deg);} 100%{opacity:1; transform:translate(-50%,-50%) rotate(0);} }
+    @keyframes addonDrop { to { opacity:1; transform:translateY(0); } }
+    @keyframes casePack { 0%{transform:translateY(0) scale(1);} 50%{transform:translateY(0) scale(.96); filter:brightness(.75);} 100%{transform:translateY(14px) scale(.78); filter:brightness(.55);} }
+    @keyframes shippingAppear { to { opacity:1; } }
+    @keyframes truckShip { 0%{left:-80px;} 42%{left:calc(50% - 140px);} 58%{left:calc(50% + 80px);} 100%{left:calc(100% + 80px);} }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div class="controls">
+    <button id="capButton">Take cap off</button>
+    <button id="tipButton">Tip</button>
+    <button id="glowButton">Glow</button>
+    <button id="trackerButton">Tracker</button>
+    <button id="buyButton" class="buy-button">Buy</button>
+  </div>
+  <aside id="factBubble" class="fact">
+    <h2>Everlasting nib</h2>
+    <p>The tip writes through a surface reaction, leaving a dark mark without liquid ink.</p>
+    <p>Estimated writing life: about 500,000+ words, or roughly 100–150 miles of line depending on surface and writing style.</p>
+  </aside>
+
+  <section id="shopPage" class="shop" aria-hidden="true">
+    <div class="shop-card">
+      <div class="shop-hero">
+        <h1>Build your Infini Pen</h1>
+        <p>Customize finish, shell, glow color, cap text, cartridges, case, glow module, and tracker.</p>
+        <div id="shopTotalBig" class="price">$9.75</div>
+        <p class="fine">Mock checkout. Estimated total updates instantly.</p>
+      </div>
+
+      <div class="row"><label for="topTextInput">Top text, up to 6 letters</label><input id="topTextInput" type="text" maxlength="6" value="Light" autocomplete="off" /></div>
+
+      <div class="row"><label for="metalSelect">Metal finish</label><select id="metalSelect">
+        <option value="aluminum">Brushed aluminum — included</option>
+        <option value="stainless">Stainless steel — +$4.50</option>
+        <option value="brass">Polished brass — +$6</option>
+        <option value="goldplate">18k gold plated — +$11</option>
+        <option value="rosegold">Rose gold plated — +$12</option>
+        <option value="blacksteel">Black steel — +$5.50</option>
+        <option value="ceramic">White ceramic — +$7.50</option>
+        <option value="carbonfiber">Carbon fiber — +$9</option>
+        <option value="titanium">Titanium — +$14.50</option>
+        <option value="sterling">Sterling silver — +$18</option>
+      </select></div>
+
+      <div class="row"><label for="shellSelect">Shell material</label><select id="shellSelect">
+        <option value="resin">Smooth resin shell — included</option>
+        <option value="recycled">Recycled polymer shell — +$0.50</option>
+        <option value="aluminumShell">Thin aluminum shell — +$1.25</option>
+        <option value="polycarbonate">Clear polycarbonate shell — +$1.00</option>
+        <option value="softtouch">Soft-touch coated shell — +$0.75</option>
+        <option value="carbonBlend">Carbon-fiber blend shell — +$2.25</option>
+      </select></div>
+
+      <div class="row"><label for="glowColorSelect">Glow color</label><select id="glowColorSelect">
+        <option value="blue">Electric blue — included</option>
+        <option value="cyan">Cyan — +$0.35</option>
+        <option value="green">Neon green — +$0.35</option>
+        <option value="purple">Violet — +$0.50</option>
+        <option value="pink">Hot pink — +$0.50</option>
+        <option value="amber">Amber — +$0.35</option>
+      </select></div>
+
+      <div class="row"><label for="bodyColorInput">Body color</label><input id="bodyColorInput" type="color" value="#111111" /></div>
+      <div class="row"><label for="extraCartridgesInput">Extra glow cartridges</label><input id="extraCartridgesInput" type="number" min="0" max="8" value="0" /></div>
+
+      <div class="row"><label>Accessories and features</label>
+        <div class="check"><span>Protective display case</span><input id="caseInput" type="checkbox" /></div>
+        <div class="check"><span>Add Glow cartridge system</span><input id="glowFeatureInput" type="checkbox" /></div>
+        <div class="check"><span>Add Tracker app + rear module</span><input id="trackerFeatureInput" type="checkbox" /></div>
+      </div>
+
+      <div class="breakdown" id="priceBreakdown"></div>
+      <div class="actions"><button id="mockCheckoutButton" class="primary">Buy</button><button id="closeShopButton" class="secondary">Back to model</button></div>
+      <p class="fine">The model updates with selected color, metal, glow liquid, and tracker options.</p>
+    </div>
+  </section>
+
+  <section id="checkoutScene" class="checkout" aria-hidden="true">
+    <button id="closeCheckoutButton" class="checkout-close">Back to model</button>
+    <div class="stage">
+      <h1>Order confirmed</h1>
+      <p id="checkoutStatus">Preparing your custom Infini Pen...</p>
+      <div class="case"><div class="foam"></div><div id="checkoutPen" class="case-pen"></div><div id="checkoutAddons" class="addons"></div></div>
+      <div class="shipping"><div class="box">Infini Pen</div><div class="truck">🚚</div></div>
+    </div>
+  </section>
+
+  <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+  <script type="importmap">
+    {"imports":{"three":"https://unpkg.com/three@0.164.1/build/three.module.js","three/addons/":"https://unpkg.com/three@0.164.1/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+    const $ = id => document.getElementById(id);
+    const ui = {
+      mount:$("scene"), cap:$("capButton"), tip:$("tipButton"), glow:$("glowButton"), tracker:$("trackerButton"), buy:$("buyButton"),
+      fact:$("factBubble"), shop:$("shopPage"), closeShop:$("closeShopButton"), checkout:$("checkoutScene"), closeCheckout:$("closeCheckoutButton"),
+      checkoutPen:$("checkoutPen"), checkoutAddons:$("checkoutAddons"), checkoutStatus:$("checkoutStatus"), checkoutBtn:$("mockCheckoutButton"),
+      topText:$("topTextInput"), metal:$("metalSelect"), shell:$("shellSelect"), glowColor:$("glowColorSelect"), bodyColor:$("bodyColorInput"),
+      cartridges:$("extraCartridgesInput"), caseInput:$("caseInput"), glowFeature:$("glowFeatureInput"), trackerFeature:$("trackerFeatureInput"),
+      breakdown:$("priceBreakdown"), total:$("shopTotalBig")
+    };
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x3a3a3a);
+    const camera = new THREE.PerspectiveCamera(34, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(3.25,1.25,10.2);
+
+    const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-performance"});
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    ui.mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = .18; controls.rotateSpeed = .32; controls.panSpeed = .24; controls.zoomSpeed = .24;
+    controls.minDistance = 2.1; controls.maxDistance = 22; controls.target.set(0,.42,0);
+
+    const mat = {
+      body:new THREE.MeshPhysicalMaterial({color:0x111111, roughness:.28, metalness:.18, clearcoat:1, clearcoatRoughness:.18}),
+      body2:new THREE.MeshPhysicalMaterial({color:0x202020, roughness:.36, metalness:.12, clearcoat:.75, clearcoatRoughness:.2}),
+      dark:new THREE.MeshStandardMaterial({color:0x080808, roughness:.52, metalness:.08}),
+      metal:new THREE.MeshPhysicalMaterial({color:0xcfd3d6, roughness:.18, metalness:.9, clearcoat:1, clearcoatRoughness:.08}),
+      metalDark:new THREE.MeshPhysicalMaterial({color:0x7e8790, roughness:.26, metalness:.85, clearcoat:.8, clearcoatRoughness:.13}),
+      graphite:new THREE.MeshPhysicalMaterial({color:0x242424, roughness:.26, metalness:.38, clearcoat:.45, clearcoatRoughness:.18}),
+      glass:new THREE.MeshStandardMaterial({color:0x1a6dff, roughness:.18, metalness:0, transparent:true, opacity:.22}),
+      glow:new THREE.MeshStandardMaterial({color:0x0048ff, emissive:0x003cff, emissiveIntensity:1.15, roughness:.18, metalness:0}),
+      tracker:new THREE.MeshStandardMaterial({color:0x08090c, roughness:.28, metalness:.35}),
+      trackerBlue:new THREE.MeshStandardMaterial({color:0x00aaff, emissive:0x008cff, emissiveIntensity:1.6, roughness:.18, metalness:.05})
+    };
+
+    const pen = new THREE.Group();
+    scene.add(pen);
+
+    function cyl(g, rt, rb, h, seg, material, x=0,y=0,z=0, open=false) {
+      const geo = new THREE.CylinderGeometry(rt, rb, h, Math.min(seg,56), 1, open);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x,y,z); mesh.castShadow = mesh.receiveShadow = true; g.add(mesh); return mesh;
+    }
+    function ring(g,y,r,t,material=mat.metal,seg=56){ return cyl(g,r,r,t,seg,material,0,y,0); }
+    function roundedBox(w,h,d,r,segs){
+      const s = new THREE.Shape(), x=-w/2, y=-h/2;
+      s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r);
+      s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      s.lineTo(x+r,y+h); s.quadraticCurveTo(x,y+h,x,y+h-r);
+      s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y);
+      const geo = new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:true,bevelThickness:r*.36,bevelSize:r*.36,bevelSegments:segs,curveSegments:segs});
+      geo.center(); return geo;
+    }
+    // Raised grip geometry removed for a smoother, glitch-free shell.
+
+    const bodyRadius=.355, barrelLength=5.95;
+    cyl(pen,bodyRadius,bodyRadius,barrelLength,112,mat.body,0,-.55,0);
+    ring(pen,1.98,bodyRadius+.01,.028); ring(pen,1.88,bodyRadius+.006,.018,mat.metalDark);
+    ring(pen,-3.22,bodyRadius+.006,.028); cyl(pen,bodyRadius,bodyRadius,.22,112,mat.metal,0,-3.64,0);
+    cyl(pen,bodyRadius*.98,bodyRadius*.98,.035,112,mat.metalDark,0,-3.782,0);
+    // Clean solid exterior: no raised grip ridges.
+
+    const trackerModule = new THREE.Group(); trackerModule.position.set(0,-3.82,0); pen.add(trackerModule);
+    cyl(trackerModule,bodyRadius*.58,bodyRadius*.58,.026,72,mat.tracker,0,-.012,0);
+    const trackerLens = cyl(trackerModule,bodyRadius*.32,bodyRadius*.32,.031,72,mat.trackerBlue,0,-.033,0);
+    cyl(trackerModule,bodyRadius*.08,bodyRadius*.08,.036,36,mat.body,bodyRadius*.2,-.055,bodyRadius*.08);
+    ring(trackerModule,-.049,bodyRadius*.43,.012,mat.metal,72);
+
+    const trackerApp = new THREE.Group(); trackerApp.visible=false; trackerApp.position.set(.9,-3.28,.72); trackerApp.rotation.set(-.1,-.35,.02); pen.add(trackerApp);
+    trackerApp.add(new THREE.Mesh(roundedBox(.58,.98,.055,.08,12), mat.tracker));
+    const screen = new THREE.Mesh(roundedBox(.5,.84,.022,.055,10), new THREE.MeshBasicMaterial({color:0x10243a})); screen.position.z=.045; trackerApp.add(screen);
+    const appDot = new THREE.Mesh(new THREE.CircleGeometry(.07,36), new THREE.MeshBasicMaterial({color:0x00aaff})); appDot.position.set(0,.1,.058); trackerApp.add(appDot);
+
+    const glowCutaway = new THREE.Group(); glowCutaway.position.set(0,-.72,0); glowCutaway.visible=false; pen.add(glowCutaway);
+    const cavity = new THREE.Group(); cavity.position.set(0,-.72,bodyRadius+.006); cavity.visible=false; pen.add(cavity);
+    [{w:.54,h:.08,x:0,y:1.29},{w:.54,h:.08,x:0,y:-1.29},{w:.07,h:2.48,x:-.285,y:0},{w:.07,h:2.48,x:.285,y:0}].forEach(p=>{
+      const m=new THREE.Mesh(roundedBox(p.w,p.h,.05,.035,8), mat.dark); m.position.set(p.x,p.y,.018); cavity.add(m);
+    });
+    const cartridgeZ = bodyRadius*.68;
+    cyl(glowCutaway,.115,.115,2.35,64,mat.glass,0,0,cartridgeZ);
+    const glowCore = cyl(glowCutaway,.108,.108,2.12,64,mat.glow,0,0,cartridgeZ);
+    cyl(glowCutaway,.128,.128,.09,64,mat.metal,0,1.22,cartridgeZ); cyl(glowCutaway,.128,.128,.09,64,mat.metal,0,-1.22,cartridgeZ);
+    const liquid = cyl(glowCutaway,.112,.112,2.02,64,mat.glow,0,0,cartridgeZ+.006);
+    liquid.scale.z=1.28;
+    const beads=[]; for(let i=0;i<10;i++){ const b=new THREE.Mesh(new THREE.SphereGeometry(.044+(i%3)*.008,18,12), mat.glow); b.userData={baseY:-1+i*.118,phase:i*.72,radius:.045+(i%4)*.006}; b.position.set(0,b.userData.baseY,cartridgeZ); glowCutaway.add(b); beads.push(b); }
+
+    const glowLight = new THREE.PointLight(0x006dff,0,3.2); glowLight.position.set(0,-.72,bodyRadius*1.08); scene.add(glowLight);
+    const panel = new THREE.Group(); panel.position.set(0,-.72,bodyRadius+.023); panel.visible=false; pen.add(panel);
+    panel.add(new THREE.Mesh(roundedBox(.54,2.62,.055,.11,14), mat.body));
+    const panelTop=ring(panel,1.35,bodyRadius*.98,.018); panelTop.rotation.z=Math.PI/2;
+    const panelBot=ring(panel,-1.35,bodyRadius*.98,.018); panelBot.rotation.z=Math.PI/2;
+
+    const tipGroup=new THREE.Group(); tipGroup.position.set(0,2.42,0); pen.add(tipGroup);
+    cyl(tipGroup,bodyRadius*.74,bodyRadius*.98,.24,96,mat.metal,0,.08,0);
+    cyl(tipGroup,bodyRadius*.4,bodyRadius*.74,.32,96,mat.body2,0,.36,0);
+    cyl(tipGroup,bodyRadius*.15,bodyRadius*.4,.28,96,mat.metal,0,.66,0);
+    const nib=cyl(tipGroup,.022,bodyRadius*.15,.3,72,mat.graphite,0,.95,0); nib.name="everlastingNib";
+
+    const cap=new THREE.Group(), capOn=new THREE.Vector3(0,2.43,0), capOff=new THREE.Vector3(0,4.82,0);
+    cap.position.copy(capOn); pen.add(cap);
+    const capLength=2.05, capRadius=bodyRadius;
+    cyl(cap,capRadius,capRadius,capLength,112,mat.body,0,0,0);
+    const topY=capLength/2+.04;
+    cyl(cap,capRadius,capRadius*.985,.08,112,mat.body2,0,topY,0);
+    cyl(cap,capRadius*.82,capRadius*.95,.075,112,mat.dark,0,topY+.072,0);
+
+    const txtCanvas=document.createElement("canvas"); txtCanvas.width=txtCanvas.height=512;
+    const ctx=txtCanvas.getContext("2d"); const txtTex=new THREE.CanvasTexture(txtCanvas); txtTex.colorSpace=THREE.SRGBColorSpace;
+    function updateTopText(v){
+      const clean=String(v??"").replace(/[^a-z0-9]/gi,"").slice(0,6);
+      ctx.clearRect(0,0,512,512); ctx.fillStyle=ui.bodyColor.value||"#111111"; ctx.beginPath(); ctx.arc(256,256,246,0,Math.PI*2); ctx.fill();
+      const c=new THREE.Color(ui.bodyColor.value||"#111111"); const lum=c.r*.2126+c.g*.7152+c.b*.0722;
+      ctx.fillStyle=lum<.45?"#f4f4f4":"#1a1a1a"; ctx.font=clean.length>4?"bold 96px Inter, Arial":"bold 118px Inter, Arial";
+      ctx.textAlign="center"; ctx.textBaseline="middle"; if(clean) ctx.fillText(clean,256,258); txtTex.needsUpdate=true;
+      if(ui.topText.value.replace(/[^a-z0-9]/gi,"").slice(0,6)!==clean) ui.topText.value=clean;
+    }
+    updateTopText("Light");
+    const topFace=new THREE.Mesh(new THREE.CircleGeometry(capRadius*.76,96), new THREE.MeshBasicMaterial({map:txtTex,transparent:true,side:THREE.DoubleSide}));
+    topFace.rotation.x=-Math.PI/2; topFace.position.set(0,topY+.114,0); cap.add(topFace);
+    ring(cap,-1.025,capRadius+.018,.04); ring(cap,-.925,capRadius+.011,.022,mat.metalDark);
+    ring(cap,.84,capRadius*.98,.024); ring(cap,.98,capRadius*.98,.018,mat.metalDark);
+
+    const clip=new THREE.Group(); clip.position.set(0,-.05,capRadius+.004); cap.add(clip);
+    const anchor=new THREE.Mesh(roundedBox(.31,.3,.115,.055,10), mat.metal); anchor.position.set(0,.79,.04); clip.add(anchor);
+    const clipPlate=new THREE.Mesh(new THREE.BoxGeometry(.2,1.62,.032), mat.metal); clipPlate.position.set(0,-.05,.13); clip.add(clipPlate);
+    const lip=new THREE.Mesh(roundedBox(.175,.17,.06,.04,8), mat.metalDark); lip.position.set(0,-.88,.205); lip.rotation.x=-.16; clip.add(lip);
+
+    scene.add(new THREE.HemisphereLight(0xffffff,0x2f2f2f,2.45));
+    const key=new THREE.DirectionalLight(0xffffff,2.95); key.position.set(4.8,7.8,7.8); scene.add(key);
+    const rim=new THREE.DirectionalLight(0xffffff,1.45); rim.position.set(-5.5,4.5,-4.5); scene.add(rim);
+    const glint=new THREE.PointLight(0xffe0a3,6.2,16); glint.position.set(2.8,2.2,5.2); scene.add(glint);
+    const fill=new THREE.PointLight(0xffffff,4.5,18); fill.position.set(-3,.5,6); scene.add(fill);
+
+    let capOpen=false, glowOpen=false, trackerOpen=false, productTracker=true, cameraAnimating=false, checkoutTimers=[];
+    const clock=new THREE.Clock();
+    const homePos=new THREE.Vector3(3.25,1.25,10.2), homeTar=new THREE.Vector3(0,.42,0);
+    const tipPos=new THREE.Vector3(1.05,3.45,2.28), tipTar=new THREE.Vector3(0,3.45,0);
+    const glowPos=new THREE.Vector3(1.15,-.58,2.55), glowTar=new THREE.Vector3(0,-.72,.34);
+    const trackerPos=new THREE.Vector3(1.05,-3.72,2.05), trackerTar=new THREE.Vector3(0,-3.82,0);
+    const desiredPos=homePos.clone(), desiredTar=homeTar.clone();
+    function moveCameraTo(p,t){ desiredPos.copy(p); desiredTar.copy(t); cameraAnimating=true; }
+    function showFacts(html){ ui.fact.innerHTML=html; ui.fact.classList.add("visible"); }
+    function closeGlow(){ glowOpen=false; ui.glow.textContent="Glow"; }
+    function closeTracker(){ trackerOpen=false; ui.tracker.textContent="Tracker"; }
+
+    const pricing={
+      base:9.75, engraving:1.5, bodyColor:2.25, case:4.5, glowSystem:6.5, tracker:8.5, cartridge:1.88,
+      shells:{resin:["Smooth resin shell",0,.2,.02,1], recycled:["Recycled polymer shell",.5,.32,.01,.65], aluminumShell:["Thin aluminum shell",1.25,.2,.28,.8], polycarbonate:["Clear polycarbonate shell",1,.08,0,1], softtouch:["Soft-touch coated shell",.75,.55,0,.2], carbonBlend:["Carbon-fiber blend shell",2.25,.3,.08,.75]},
+      glowColors:{blue:["Electric blue",0,0x0048ff,0x003cff,0x006dff], cyan:["Cyan",.35,0x00d9ff,0x00bfff,0x00e5ff], green:["Neon green",.35,0x38ff4f,0x00ff2a,0x70ff7a], purple:["Violet",.5,0x8a35ff,0x7220ff,0x9b5cff], pink:["Hot pink",.5,0xff3bd4,0xff1ec7,0xff67df], amber:["Amber",.35,0xffa000,0xff8c00,0xffbd33]},
+      metals:{aluminum:["Brushed aluminum",0,0xcfd3d6,0x9aa1a8], stainless:["Stainless steel",4.5,0xe2e5e8,0xaeb5bd], brass:["Polished brass",6,0xd5a73d,0x9d721f], goldplate:["18k gold plated",11,0xffd15c,0xb6811f], rosegold:["Rose gold plated",12,0xf0a08c,0xa85f51], blacksteel:["Black steel",5.5,0x151515,0x070707], ceramic:["White ceramic",7.5,0xf8f5ec,0xcfc8b8], carbonfiber:["Carbon fiber",9,0x2d2d2d,0x090909], titanium:["Titanium",14.5,0xaeb3bc,0x6f7682], sterling:["Sterling silver",18,0xf0f2f5,0xb6bec8]}
+    };
+    const money=v=>`$${v.toFixed(2)}`;
+    function setBodyColor(hex){
+      const body=new THREE.Color(hex||"#111111");
+      mat.body.color.copy(body); mat.body2.color.copy(body.clone().lerp(new THREE.Color(0x888888),.12)); mat.dark.color.copy(body.clone().lerp(new THREE.Color(0x555555),.22)); updateTopText(ui.topText.value);
+    }
+    function setMetal(type){ const m=pricing.metals[type]||pricing.metals.aluminum; mat.metal.color.setHex(m[2]); mat.metalDark.color.setHex(m[3]); }
+    function setShell(type){ const s=pricing.shells[type]||pricing.shells.resin; mat.body.roughness=s[2]; mat.body.metalness=s[3]; mat.body.clearcoat=s[4]; mat.body.needsUpdate=true; }
+    function setGlowColor(type){ const g=pricing.glowColors[type]||pricing.glowColors.blue; mat.glow.color.setHex(g[2]); mat.glow.emissive.setHex(g[3]); mat.glass.color.setHex(g[2]); glowLight.color.setHex(g[4]); }
+    function calc(){
+      const m=pricing.metals[ui.metal.value]||pricing.metals.aluminum, s=pricing.shells[ui.shell.value]||pricing.shells.resin, g=pricing.glowColors[ui.glowColor.value]||pricing.glowColors.blue;
+      const extras=Math.max(0,Math.min(8,Number(ui.cartridges.value)||0));
+      const text=String(ui.topText.value??"").replace(/[^a-z0-9]/gi,"").slice(0,6);
+      const lines=[["Base Infini Pen with everlasting nib",pricing.base],[`Metal finish: ${m[0]}`,m[1]],[`Shell material: ${s[0]}`,s[1]]];
+      if(text && text.toLowerCase()!=="light") lines.push([`Custom top text: ${text}`,pricing.engraving]);
+      if(ui.bodyColor.value.toLowerCase()!=="#111111") lines.push(["Custom body color finish",pricing.bodyColor]);
+      if(ui.caseInput.checked) lines.push(["Protective display case",pricing.case]);
+      if(ui.glowFeature.checked) lines.push(["Glow cartridge system",pricing.glowSystem]);
+      if(ui.glowFeature.checked && g[1]>0) lines.push([`Glow color: ${g[0]}`,g[1]]);
+      if(ui.trackerFeature.checked) lines.push(["Tracker app + rear module",pricing.tracker]);
+      if(extras>0) lines.push([`${extras} extra glow cartridge${extras===1?"":"s"}`,extras*pricing.cartridge]);
+      const subtotal=lines.reduce((a,b)=>a+b[1],0), qc=Math.max(2,subtotal*.12); lines.push(["Small-batch assembly + quality check",qc]);
+      return {lines,total:subtotal+qc,extras,metal:m,shell:s,glow:g};
+    }
+    function update(){
+      updateTopText(ui.topText.value); setBodyColor(ui.bodyColor.value); setMetal(ui.metal.value); setShell(ui.shell.value); setGlowColor(ui.glowColor.value);
+      productTracker=ui.trackerFeature.checked; trackerModule.visible=productTracker||trackerOpen;
+      const c=calc(); ui.total.textContent=money(c.total);
+      ui.breakdown.innerHTML=c.lines.map(l=>`<div class="line"><span>${l[0]}</span><strong>${money(l[1])}</strong></div>`).join("")+`<div class="line total"><span>Estimated total</span><strong>${money(c.total)}</strong></div>`;
+    }
+    function openShop(){
+      closeGlow(); closeTracker(); capOpen=false; ui.cap.textContent="Take cap off"; ui.fact.classList.remove("visible");
+      ui.glowFeature.checked=false; ui.trackerFeature.checked=false; ui.cartridges.value="0"; ui.caseInput.checked=false; ui.metal.value="aluminum"; ui.shell.value="resin"; ui.glowColor.value="blue"; ui.bodyColor.value="#111111"; ui.topText.value="Light";
+      update(); ui.shop.classList.add("visible"); ui.shop.setAttribute("aria-hidden","false"); moveCameraTo(new THREE.Vector3(3.85,1.25,8.8),homeTar);
+    }
+    function closeShop(){ ui.shop.classList.remove("visible"); ui.shop.setAttribute("aria-hidden","true"); update(); }
+    function closeCheckout(){ checkoutTimers.forEach(clearTimeout); checkoutTimers=[]; ui.checkout.classList.remove("visible","running"); ui.checkout.setAttribute("aria-hidden","true"); }
+    function checkout(){
+      closeGlow(); closeTracker(); closeShop(); ui.fact.classList.remove("visible"); const c=calc();
+      ui.checkoutPen.style.setProperty("--pen-body", ui.bodyColor.value||"#111111");
+      ui.checkoutPen.style.setProperty("--pen-metal", "#"+c.metal[2].toString(16).padStart(6,"0"));
+      const addons=[`${c.shell[0]} shell`]; if(ui.caseInput.checked) addons.push("Foam display case"); if(ui.glowFeature.checked) addons.push(`${c.glow[0]} glow module`); if(ui.trackerFeature.checked) addons.push("Tracker module + app"); if(c.extras>0) addons.push(`${c.extras} cartridge${c.extras===1?"":"s"}`);
+      ui.checkoutAddons.innerHTML=addons.map((a,i)=>`<span class="chip" style="animation-delay:${1.8+i*.22}s">${a}</span>`).join("");
+      ui.checkoutStatus.textContent="Preparing your custom Infini Pen..."; ui.checkout.classList.add("visible"); ui.checkout.setAttribute("aria-hidden","false"); ui.checkout.classList.remove("running"); void ui.checkout.offsetWidth; ui.checkout.classList.add("running");
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Foam-lined case loaded with your pen and add-ons.",2500));
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Case sealed. Shipping label created.",4700));
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Shipped off!",6400));
+    }
+
+    controls.addEventListener("start",()=>cameraAnimating=false);
+    ui.cap.onclick=()=>{ closeGlow(); closeTracker(); capOpen=!capOpen; ui.cap.textContent=capOpen?"Recap the pen":"Take cap off"; if(!capOpen){ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.tip.onclick=()=>{ closeGlow(); closeTracker(); capOpen=true; ui.cap.textContent="Recap the pen"; showFacts(`<h2>Everlasting nib</h2><p>The tip writes through a simple surface reaction and can last much longer than a normal pen.</p><p>Estimated writing life: about 500,000+ words, or 100–150 miles of line.</p>`); moveCameraTo(tipPos,tipTar); };
+    ui.glow.onclick=()=>{ closeTracker(); glowOpen=!glowOpen; ui.glow.textContent=glowOpen?"Close glow":"Glow"; if(glowOpen){showFacts(`<h2>Glow cartridge</h2><p>A blue luminescent liquid is metered into the writing line so marks can glow in the dark.</p><p>Capacity estimate: 40,000 glowing words or 8–12 miles of glowing line.</p>`); moveCameraTo(glowPos,glowTar);} else {ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.tracker.onclick=()=>{ closeGlow(); trackerOpen=!trackerOpen; ui.tracker.textContent=trackerOpen?"Close tracker":"Tracker"; if(trackerOpen){showFacts(`<h2>Tracker end</h2><p>The rear end contains a tiny tracker module with a status LED and companion app concept.</p><p>Concept range: up to 150 ft indoors.</p>`); moveCameraTo(trackerPos,trackerTar);} else {ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.buy.onclick=openShop; ui.closeShop.onclick=closeShop; ui.closeCheckout.onclick=closeCheckout; ui.checkoutBtn.onclick=checkout;
+    [ui.topText,ui.metal,ui.shell,ui.glowColor,ui.bodyColor,ui.cartridges,ui.caseInput,ui.glowFeature,ui.trackerFeature].forEach(el=>{el.addEventListener("input",update);el.addEventListener("change",update);});
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const time=clock.getElapsedTime();
+      cap.position.lerp(capOpen?capOff:capOn,.085); cap.rotation.z=THREE.MathUtils.lerp(cap.rotation.z,0,.12); cap.rotation.x=THREE.MathUtils.lerp(cap.rotation.x,0,.12);
+      const closedZ=bodyRadius+.023, moving=glowOpen||Math.abs(panel.position.z-closedZ)>.025||Math.abs(panel.position.x)>.025||Math.abs(panel.position.y+.72)>.025;
+      panel.visible=moving; glowCutaway.visible=glowOpen; cavity.visible=glowOpen; trackerModule.visible=trackerOpen||productTracker; trackerApp.visible=trackerOpen;
+      trackerLens.material.emissiveIntensity=trackerOpen?2.3+Math.sin(time*4)*.45:1.1;
+      panel.position.z=THREE.MathUtils.lerp(panel.position.z,glowOpen?bodyRadius+1.45:closedZ,.095);
+      panel.position.x=THREE.MathUtils.lerp(panel.position.x,glowOpen?1.45:0,.095);
+      panel.position.y=THREE.MathUtils.lerp(panel.position.y,glowOpen?-.34:-.72,.095);
+      panel.rotation.y=THREE.MathUtils.lerp(panel.rotation.y,glowOpen?-1.12:0,.095);
+      panel.rotation.z=THREE.MathUtils.lerp(panel.rotation.z,glowOpen?-.22:0,.095);
+      glowLight.intensity=THREE.MathUtils.lerp(glowLight.intensity,glowOpen?4.4:0,.08);
+      glowCore.material.emissiveIntensity=THREE.MathUtils.lerp(glowCore.material.emissiveIntensity,glowOpen?1.55:.75,.08);
+      liquid.material.emissiveIntensity=glowCore.material.emissiveIntensity;
+      if(glowOpen) beads.forEach((b,i)=>{ const flow=(b.userData.baseY+time*.42)%2.05, phase=time*2.4+b.userData.phase; b.position.y=flow-1.025; b.position.x=Math.sin(phase)*b.userData.radius; b.position.z=cartridgeZ+Math.cos(phase*.82)*b.userData.radius*.55; b.scale.setScalar(1+Math.sin(time*3+i)*.12); });
+      if(cameraAnimating){ camera.position.lerp(desiredPos,.075); controls.target.lerp(desiredTar,.075); if(camera.position.distanceTo(desiredPos)<.012&&controls.target.distanceTo(desiredTar)<.012){ camera.position.copy(desiredPos); controls.target.copy(desiredTar); cameraAnimating=false; } }
+      controls.update(); renderer.render(scene,camera);
+    }
+    update(); animate();
+    addEventListener("resize",()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,1.35)); });
+  </script>
+</body>
+</html>
