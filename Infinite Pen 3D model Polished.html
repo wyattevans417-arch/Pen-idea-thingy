@@ -1,0 +1,1210 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infini Pen 3D Configurator</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; width: 100%; height: 100%; overflow: hidden;
+      background: #3a3a3a; color: #fff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #scene { position: fixed; inset: 0; }
+    .controls {
+      position: fixed; right: 22px; top: 22px; z-index: 5;
+      display: grid; gap: 10px;
+    }
+    button {
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.14);
+      color: #fff; min-width: 148px;
+      padding: 12px 15px; border-radius: 999px;
+      font-weight: 800; cursor: pointer;
+      box-shadow: 0 12px 34px rgba(0,0,0,.22);
+    }
+    button:hover { background: rgba(255,255,255,.22); }
+    .buy-button { background:#050505; color:#f5d27b; border-color:rgba(255,220,150,.55); }
+    .hint {
+      position: fixed; right: 22px; bottom: 18px;
+      color: rgba(255,255,255,.55); font-size: 12px;
+      letter-spacing:.08em; text-transform:uppercase; pointer-events:none;
+    }
+    .fact {
+      position: fixed; left: 24px; top: 50%;
+      transform: translateY(-50%) translateX(-18px);
+      width: min(430px, calc(100vw - 48px));
+      padding: 26px 28px; border-radius: 28px;
+      background: rgba(18,18,18,.62);
+      border: 1px solid rgba(255,220,150,.32);
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity .26s ease, transform .26s ease;
+      z-index: 4;
+    }
+    .fact.visible { opacity: 1; transform: translateY(-50%) translateX(0); }
+    .fact h2 { margin: 0 0 14px; color:#f1c86c; font-size:28px; line-height:1.12; }
+    .fact p { margin: 0 0 14px; color:rgba(255,255,255,.78); font-size:18px; line-height:1.48; }
+    .shop {
+      position: fixed; left: 22px; top: 22px; bottom: 22px;
+      width: min(430px, calc(100vw - 44px));
+      display: none; z-index: 20; color:#fff;
+    }
+    .shop.visible { display:block; }
+    .shop-card {
+      height: 100%; overflow:auto; display:grid; gap:16px;
+      padding:18px; border-radius:28px;
+      background: linear-gradient(145deg, rgba(28,28,28,.88), rgba(10,10,10,.76));
+      border: 1px solid rgba(255,255,255,.2);
+      box-shadow: 0 30px 90px rgba(0,0,0,.42);
+    }
+    .shop-hero {
+      padding:18px; border-radius:22px;
+      background: radial-gradient(circle at top, rgba(245,210,123,.18), rgba(0,0,0,.22) 52%, rgba(0,0,0,.34));
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .shop-hero h1 { margin:0 0 8px; font-size: clamp(30px, 4vw, 44px); line-height:.98; letter-spacing:-.05em; }
+    .shop-hero p, .fine { margin:0; color: rgba(255,255,255,.62); font-size: 12px; line-height:1.45; }
+    .price { margin-top:10px; font-size:40px; font-weight:900; color:#f5d27b; letter-spacing:-.04em; }
+    .row {
+      display:grid; gap:8px; padding:15px; border-radius:20px;
+      background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.12);
+    }
+    .row label { font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.62); }
+    .parts {
+      display:grid; gap:10px; padding:16px; border-radius:20px;
+      background:rgba(255,255,255,.075); border:1px solid rgba(245,210,123,.18);
+    }
+    .parts h3 { margin:0; color:#f5d27b; font-size:18px; letter-spacing:-.02em; }
+    .part {
+      display:grid; gap:3px; padding:10px 0;
+      border-top:1px solid rgba(255,255,255,.1);
+    }
+    .part:first-of-type { border-top:0; }
+    .part strong { color:rgba(255,255,255,.9); font-size:14px; }
+    .part span { color:rgba(255,255,255,.58); font-size:12px; line-height:1.35; }
+    .chem { font-variant-numeric: lining-nums; white-space:normal; }
+    select, input[type="text"], input[type="number"] {
+      width:100%; border:1px solid rgba(255,255,255,.18); border-radius:14px;
+      background:rgba(0,0,0,.32); color:white; padding:12px 13px; font-size:16px;
+    }
+    input[type="color"] {
+      width:100%; height:44px; padding:4px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.32);
+    }
+    .check { display:flex; justify-content:space-between; align-items:center; gap:14px; font-size:16px; }
+    .check input { width:22px; height:22px; accent-color:#f5d27b; }
+    .breakdown {
+      display:grid; gap:8px; padding:16px; border-radius:20px;
+      background:rgba(0,0,0,.28); border:1px solid rgba(255,220,150,.26);
+    }
+    .line { display:flex; justify-content:space-between; gap:18px; color:rgba(255,255,255,.76); font-size:15px; }
+    .line.total { padding-top:10px; border-top:1px solid rgba(255,255,255,.16); color:#f5d27b; font-size:21px; font-weight:900; }
+    .actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .primary { background:#f5d27b; color:#111; border:0; }
+    .secondary { background:rgba(255,255,255,.12); color:#fff; }
+    .checkout {
+      position: fixed; inset:0; z-index:40; display:none; place-items:center;
+      background:#3a3a3a; color:white; overflow:hidden; text-align:center;
+    }
+    .checkout.visible { display:grid; }
+    .checkout-close { position: fixed; right:22px; top:22px; z-index:42; }
+    .stage { width:min(920px, calc(100vw - 42px)); min-height:min(610px, calc(100vh - 42px)); display:grid; place-items:center; align-content:center; gap:18px; }
+    .stage h1 { margin:0; font-size:clamp(38px,6vw,78px); letter-spacing:-.06em; line-height:.95; }
+    .stage p { margin:0; color:rgba(255,255,255,.72); font-size:18px; }
+    .case {
+      position:relative; width:min(650px,86vw); height:300px;
+      border-radius:32px; background:linear-gradient(145deg,#1a1a1a,#050505);
+      border:4px solid #d5a73d;
+      box-shadow:0 30px 90px rgba(0,0,0,.48), inset 0 0 0 18px rgba(255,255,255,.035);
+      overflow:hidden; opacity:0; transform:translateY(24px) scale(.92);
+    }
+    .checkout.running .case { animation: caseArrive .9s ease forwards, casePack 1.4s ease 3.6s forwards; }
+    .foam { position:absolute; inset:26px; border-radius:24px; background:linear-gradient(135deg,#2a2a2a,#0d0d0d); }
+    .case-pen {
+      --pen-body:#111111; --pen-metal:#cfd3d6;
+      position:absolute; left:50%; top:48%; width:390px; height:24px; border-radius:999px;
+      background:linear-gradient(90deg,var(--pen-metal) 0 12%, var(--pen-body) 12% 78%, var(--pen-metal) 78% 100%);
+      border:2px solid rgba(255,255,255,.34); transform:translate(-50%,-240px) rotate(-8deg); opacity:0;
+    }
+    .checkout.running .case-pen { animation: penDrop 1.5s ease .7s forwards; }
+    .addons { position:absolute; left:50%; bottom:35px; transform:translateX(-50%); display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:88%; }
+    .chip { padding:8px 11px; border-radius:999px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); opacity:0; transform:translateY(-24px); font-size:13px; }
+    .checkout.running .chip { animation:addonDrop .6s ease forwards; }
+    .shipping { position:relative; width:min(680px,86vw); height:82px; opacity:0; }
+    .checkout.running .shipping { animation: shippingAppear .6s ease 5.2s forwards; }
+    .box { position:absolute; left:50%; top:15px; transform:translateX(-50%); padding:15px 30px; border-radius:14px; background:#b7813a; color:#221405; font-weight:900; }
+    .truck { position:absolute; left:-80px; top:22px; font-size:42px; }
+    .checkout.running .truck { animation:truckShip 2.4s ease-in-out 5.7s forwards; }
+    @keyframes caseArrive { to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes penDrop { 0%{opacity:0; transform:translate(-50%,-240px) rotate(-8deg);} 72%{opacity:1; transform:translate(-50%,-50%) rotate(-1deg);} 100%{opacity:1; transform:translate(-50%,-50%) rotate(0);} }
+    @keyframes addonDrop { to { opacity:1; transform:translateY(0); } }
+    @keyframes casePack { 0%{transform:translateY(0) scale(1);} 50%{transform:translateY(0) scale(.96); filter:brightness(.75);} 100%{transform:translateY(14px) scale(.78); filter:brightness(.55);} }
+    @keyframes shippingAppear { to { opacity:1; } }
+    @keyframes truckShip { 0%{left:-80px;} 42%{left:calc(50% - 140px);} 58%{left:calc(50% + 80px);} 100%{left:calc(100% + 80px);} }
+
+    @media (max-width: 720px) {
+      .controls {
+        left: 12px; right: 12px; top: 12px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      button { min-width: 0; padding: 10px 9px; font-size: 12px; }
+      .fact {
+        left: 12px; right: 12px; top: auto; bottom: 78px;
+        width: auto; max-height: 42vh; overflow: auto;
+        transform: translateY(12px);
+      }
+      .fact.visible { transform: translateY(0); }
+      .shop { left: 12px; right: 12px; top: 76px; bottom: 12px; width: auto; }
+      .hint { left: 12px; right: 12px; bottom: 10px; text-align: center; }
+    }
+
+
+    /* Premium full-screen buy experience */
+    body.shop-mode .controls,
+    body.shop-mode .hint,
+    body.shop-mode .fact { opacity: 0; pointer-events: none; }
+    body.shop-mode #scene::after {
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(90deg, rgba(0,0,0,.62) 0%, rgba(0,0,0,.30) 50%, rgba(0,0,0,.04) 72%, rgba(0,0,0,.18) 100%);
+      z-index: 2;
+    }
+    .shop {
+      position: fixed;
+      inset: 0;
+      width: auto;
+      display: none;
+      z-index: 20;
+      color: #fff;
+      pointer-events: none;
+      padding: clamp(14px, 2.4vw, 34px);
+      overflow: hidden;
+      background: linear-gradient(90deg, rgba(0,0,0,.76), rgba(0,0,0,.30) 52%, rgba(0,0,0,.03) 74%, rgba(0,0,0,.16));
+    }
+    .shop.visible { display:block; }
+    .shop-layout {
+      height: 100%;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(520px, min(680px, 60vw)) minmax(220px, 1fr);
+      gap: clamp(14px, 2vw, 30px);
+      align-items: stretch;
+    }
+    .shop-card {
+      pointer-events: auto;
+      height: 100%;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: grid;
+      gap: 15px;
+      align-content: start;
+      padding: clamp(18px, 2.4vw, 28px);
+      border-radius: 34px;
+      background: linear-gradient(155deg, rgba(12,12,12,.98), rgba(25,25,25,.94));
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 34px 100px rgba(0,0,0,.62), inset 0 0 0 1px rgba(245,210,123,.05);
+      backdrop-filter: blur(14px);
+    }
+    .shop-topbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      margin-bottom:2px;
+    }
+    .eyebrow {
+      color:rgba(245,210,123,.82);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .mini-close {
+      min-width:auto;
+      padding:9px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.09);
+      box-shadow:none;
+    }
+    .shop-hero {
+      padding: 18px;
+      border-radius: 25px;
+      background: linear-gradient(145deg, rgba(255,255,255,.10), rgba(0,0,0,.23));
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .shop-hero h1 { margin:0 0 9px; font-size: clamp(34px, 4vw, 52px); line-height:.92; letter-spacing:-.065em; }
+    .shop-hero p, .fine { margin:0; color: rgba(255,255,255,.66); font-size: 12px; line-height:1.45; }
+    .buy-steps {
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:8px;
+      margin-top:16px;
+    }
+    .buy-step {
+      padding:10px 9px;
+      border-radius:15px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.1);
+      color:rgba(255,255,255,.62);
+      font-size:12px;
+      font-weight:800;
+      text-align:center;
+    }
+    .buy-step.active { color:#151515; background:#f5d27b; border-color:#f5d27b; }
+    .price { margin-top:13px; font-size:46px; font-weight:950; color:#f5d27b; letter-spacing:-.055em; }
+    .config-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+    .config-grid .row.wide { grid-column:1 / -1; }
+    .row {
+      display:grid;
+      gap:8px;
+      padding:14px;
+      border-radius:20px;
+      background:rgba(255,255,255,.075);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .row:hover { border-color:rgba(245,210,123,.25); background:rgba(255,255,255,.1); }
+    .breakdown {
+      display:grid;
+      gap:8px;
+      padding:17px;
+      border-radius:22px;
+      background:rgba(0,0,0,.42);
+      border:1px solid rgba(255,220,150,.3);
+    }
+    .actions {
+      position: sticky;
+      bottom: -1px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      padding-top:10px;
+      background:linear-gradient(180deg, rgba(13,13,13,0), rgba(13,13,13,.98) 28%);
+    }
+    .actions .primary { grid-column:1 / -1; }
+    .primary {
+      background:linear-gradient(135deg,#ffe29a,#f5d27b 58%,#d7a842);
+      color:#111;
+      border:0;
+      box-shadow:0 16px 38px rgba(245,210,123,.18);
+    }
+    .secondary { background:rgba(255,255,255,.1); color:#fff; }
+    body.shop-mode #scene canvas { cursor: grab; }
+    body.shop-mode #scene canvas:active { cursor: grabbing; }
+    .shop-preview {
+      pointer-events:none;
+      position:relative;
+      min-height:100%;
+      display:block;
+      padding: 0;
+    }
+    .preview-guide {
+      align-self:start;
+      justify-self:end;
+      width:min(410px, 42vw);
+      margin-top: clamp(20px, 5vh, 64px);
+      padding:18px 20px;
+      border-radius:26px;
+      background:rgba(7,7,7,.56);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:0 24px 70px rgba(0,0,0,.36);
+      backdrop-filter:blur(10px);
+    }
+    .preview-guide h2 { margin:2px 0 8px; font-size:clamp(24px, 3vw, 42px); letter-spacing:-.055em; line-height:.94; }
+    .preview-guide p { margin:0; color:rgba(255,255,255,.64); line-height:1.45; }
+    body.shop-mode .preview-guide,
+    body.shop-mode .preview-card { display: none; }
+    .preview-card {
+      width:min(420px, 42vw);
+      padding:18px;
+      border-radius:28px;
+      background:linear-gradient(145deg, rgba(10,10,10,.76), rgba(28,28,28,.62));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:0 28px 80px rgba(0,0,0,.42);
+      backdrop-filter: blur(10px);
+    }
+    .preview-card .price { font-size:34px; margin:5px 0 12px; }
+    .preview-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .preview-chip {
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+      color:rgba(255,255,255,.78);
+      font-size:12px;
+      font-weight:750;
+    }
+    .trust-row {
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:8px;
+      margin-top:12px;
+    }
+    .trust-row span {
+      padding:9px 8px;
+      border-radius:14px;
+      background:rgba(255,255,255,.075);
+      color:rgba(255,255,255,.62);
+      font-size:11px;
+      text-align:center;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .shop-card *,
+    .shop-card button,
+    .shop-card input,
+    .shop-card select { min-width: 0; }
+
+    /* Better mock checkout */
+    .checkout {
+      position: fixed;
+      inset:0;
+      z-index:40;
+      display:none;
+      place-items:center;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(255,255,255,.07), transparent 30%),
+        linear-gradient(145deg,#303030,#141414 58%,#050505);
+      color:white;
+      overflow:hidden;
+      text-align:center;
+      padding:24px;
+    }
+    .checkout.visible { display:grid; }
+    .checkout-close { position: fixed; right:22px; top:22px; z-index:42; }
+    .stage {
+      width:min(1040px, calc(100vw - 42px));
+      min-height:min(670px, calc(100vh - 42px));
+      display:grid;
+      grid-template-columns: minmax(280px, .9fr) minmax(360px, 1.25fr);
+      place-items:stretch;
+      align-content:center;
+      gap:22px;
+      text-align:left;
+    }
+    .checkout-panel,
+    .checkout-theater {
+      border-radius:34px;
+      background:rgba(12,12,12,.72);
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow:0 30px 90px rgba(0,0,0,.44);
+      backdrop-filter: blur(12px);
+    }
+    .checkout-panel { padding:24px; display:grid; align-content:start; gap:18px; }
+    .checkout-theater { padding:24px; display:grid; place-items:center; text-align:center; overflow:hidden; }
+    .stage h1 { margin:0; font-size:clamp(38px,6vw,76px); letter-spacing:-.065em; line-height:.92; }
+    .stage p { margin:0; color:rgba(255,255,255,.72); font-size:17px; line-height:1.45; }
+    .checkout-steps {
+      display:grid;
+      gap:10px;
+      margin:4px 0;
+    }
+    .checkout-step {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px;
+      border-radius:17px;
+      background:rgba(255,255,255,.075);
+      color:rgba(255,255,255,.64);
+      border:1px solid rgba(255,255,255,.09);
+    }
+    .checkout-step::before {
+      content:"";
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#f5d27b;
+      box-shadow:0 0 18px rgba(245,210,123,.72);
+    }
+    .checkout-summary {
+      display:grid;
+      gap:8px;
+      padding:16px;
+      border-radius:22px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(245,210,123,.2);
+    }
+    .checkout-summary .line { font-size:14px; }
+    .checkout-summary .line:nth-child(n+6) { display:none; }
+    .case { width:min(610px,100%); height:300px; }
+    .shipping { width:min(610px,100%); }
+
+    @media (max-width: 900px) {
+      body.shop-mode .controls { display:none; }
+      .shop { padding:12px; overflow-y:auto; overflow-x:hidden; pointer-events:auto; }
+      .shop-layout { min-height:100%; grid-template-columns:1fr; gap:0; }
+      .shop-card { max-height:none; height:auto; order:1; }
+      .shop-preview { display:none; }
+      .config-grid { grid-template-columns:1fr; }
+      .stage { grid-template-columns:1fr; overflow:auto; }
+      .checkout { overflow:auto; }
+    }
+
+
+    /* Guided builder upgrades */
+    .builder-body { display:grid; gap:14px; }
+    .config-step { display:none; gap:14px; }
+    .config-step.active { display:grid; }
+    .section-title {
+      display:flex; justify-content:space-between; align-items:end; gap:14px;
+      padding:4px 2px 0;
+    }
+    .section-title h2 { margin:0; font-size:24px; letter-spacing:-.04em; }
+    .section-title p { margin:0; max-width:300px; color:rgba(255,255,255,.62); font-size:12px; line-height:1.45; }
+    .buy-steps { grid-template-columns:repeat(4, 1fr); }
+    .buy-step { cursor:pointer; }
+    .buy-step.complete { color:rgba(255,255,255,.86); border-color:rgba(245,210,123,.32); background:rgba(245,210,123,.10); }
+    .builder-nav {
+      position: sticky;
+      bottom: -1px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      padding-top:12px;
+      background:linear-gradient(180deg, rgba(13,13,13,0), rgba(13,13,13,.98) 28%);
+      z-index:2;
+    }
+    .builder-nav .primary { grid-column:1 / -1; }
+    .builder-nav .review-only { display:none; }
+    .builder-nav.review .review-only { display:block; }
+    .builder-nav.review #nextStepButton { display:none; }
+    .glow-swatches { display:flex; flex-wrap:wrap; gap:8px; }
+    .glow-swatch {
+      min-width:0; width:42px; height:42px; padding:0; border-radius:50%;
+      border:2px solid rgba(255,255,255,.22); box-shadow:none;
+      background:var(--swatch); position:relative;
+    }
+    .glow-swatch.active { border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,.14), 0 0 22px var(--swatch); }
+    .dark-preview-toggle {
+      width:100%; min-width:0; border-radius:14px; box-shadow:none;
+      background:rgba(0,0,0,.34); color:#fff;
+    }
+    body.dark-glow-preview #scene::before {
+      content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+      background:radial-gradient(circle at 68% 50%, rgba(0,180,255,.12), transparent 32%), rgba(0,0,0,.18);
+    }
+    .material-preview-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .material-card {
+      min-height:84px; padding:12px; border-radius:18px;
+      border:1px solid rgba(255,255,255,.12); overflow:hidden; position:relative;
+      background:rgba(255,255,255,.08); display:grid; align-content:end; gap:4px;
+    }
+    .material-card::before { content:""; position:absolute; inset:0; opacity:.55; }
+    .material-card.brushed::before { background:repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 1px, transparent 1px 8px), linear-gradient(135deg,#9da4ab,#f3f5f7,#777e86); }
+    .material-card.carbon::before { background:repeating-linear-gradient(45deg, #070707 0 7px, #252525 7px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,.12) 0 6px, transparent 6px 12px); }
+    .material-card.clear::before { background:linear-gradient(135deg, rgba(180,220,255,.32), rgba(255,255,255,.07)), repeating-linear-gradient(90deg, transparent 0 10px, rgba(255,255,255,.12) 10px 12px); }
+    .material-card strong, .material-card span { position:relative; z-index:1; }
+    .material-card strong { font-size:13px; }
+    .material-card span { font-size:11px; color:rgba(255,255,255,.68); line-height:1.3; }
+    .copy-card {
+      padding:16px; border-radius:20px; background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12); display:grid; gap:8px;
+    }
+    .copy-card h3 { margin:0; color:#f5d27b; font-size:18px; }
+    .copy-card p { margin:0; color:rgba(255,255,255,.70); font-size:13px; line-height:1.45; }
+    .validation-note {
+      padding:13px 14px; border-radius:18px; background:rgba(245,210,123,.10);
+      border:1px solid rgba(245,210,123,.24); color:rgba(255,255,255,.70);
+      font-size:12px; line-height:1.45;
+    }
+    .review-card {
+      display:grid; gap:10px; padding:16px; border-radius:22px;
+      background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+    }
+    .review-card h3 { margin:0; font-size:20px; letter-spacing:-.03em; }
+    .review-card p { margin:0; color:rgba(255,255,255,.66); line-height:1.45; font-size:13px; }
+    .checkout-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .checkout-actions button { min-width:0; box-shadow:none; }
+    .final-card {
+      display:none; padding:16px; border-radius:22px;
+      background:rgba(245,210,123,.12); border:1px solid rgba(245,210,123,.28);
+    }
+    .checkout.final-ready .final-card { display:grid; gap:5px; }
+    .checkout.final-ready .final-card strong { color:#f5d27b; }
+    .cart-spark {
+      display:inline-block; width:34px; height:10px; border-radius:999px;
+      background:linear-gradient(90deg, rgba(255,255,255,.85), var(--glowColor, #00aaff));
+      box-shadow:0 0 18px var(--glowColor, #00aaff);
+      vertical-align:middle; margin-right:6px;
+    }
+    @media (max-width: 540px) {
+      .material-preview-grid { grid-template-columns:1fr; }
+      .section-title { display:grid; }
+      .builder-nav { grid-template-columns:1fr; }
+      .builder-nav .primary { grid-column:auto; }
+    }
+
+    @media (max-width: 540px) {
+      .shop { padding:10px; }
+      .shop-card { border-radius:24px; padding:14px; }
+      .buy-steps, .trust-row { grid-template-columns:1fr; }
+      .actions { grid-template-columns:1fr; }
+      .preview-card, .preview-guide { border-radius:22px; }
+      .checkout-panel, .checkout-theater { border-radius:24px; padding:16px; }
+      .case { height:240px; }
+      .case-pen { width:300px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div class="controls">
+    <button id="capButton">Take cap off</button>
+    <button id="tipButton">Tip</button>
+    <button id="glowButton">Glow</button>
+    <button id="trackerButton">Tracker</button>
+    <button id="partsButton">Parts</button>
+    <button id="buyButton" class="buy-button">Buy</button>
+  </div>
+  <aside id="factBubble" class="fact">
+    <h2>Engineered material stack</h2>
+    <p>The newest build uses a 6061-T6 aluminum chassis, 316L stainless feed tubes, Bi-Sn-In fusible-alloy eternal tips, precision PTFE/FVMQ seals, and a BLE tracker module.</p>
+    <p>The glow system blends stabilized distilled water with glycerin, citric acid, Polysorbate 20, fluorescein, and silica-coated SrAl₂O₄:Eu,Dy powder.</p>
+  </aside>
+
+  <section id="shopPage" class="shop" aria-hidden="true">
+    <div class="shop-layout">
+      <div class="shop-card">
+        <div class="shop-topbar">
+          <div>
+            <div class="eyebrow">Configure your build</div>
+            <p class="fine">Mock checkout · live pricing · interactive 3D preview</p>
+          </div>
+          <button id="closeShopButton" class="mini-close" aria-label="Back to model">Back</button>
+        </div>
+
+        <div class="shop-hero">
+          <h1>Build your Infini Pen</h1>
+          <p>Choose the finish, shell, glow system, tracker, cartridges, and engraving while the internal stack stays engineered around 6061-T6 aluminum, 316L feed tubes, Bi-Sn-In tip alloy, PTFE/FVMQ seals, and BLE electronics.</p>
+          <div id="shopTotalBig" class="price">$9.75</div>
+          <div class="buy-steps" aria-label="Build steps">
+            <button type="button" class="buy-step active" data-step-index="0">1 · Body</button>
+            <button type="button" class="buy-step" data-step-index="1">2 · Core Tech</button>
+            <button type="button" class="buy-step" data-step-index="2">3 · Finish</button>
+            <button type="button" class="buy-step" data-step-index="3">4 · Review</button>
+          </div>
+        </div>
+
+        <div class="builder-body">
+          <section class="config-step active" data-config-step="body">
+            <div class="section-title">
+              <h2>Body</h2>
+              <p>Start with the outer feel: cap text, chassis finish, shell material, and body color.</p>
+            </div>
+            <div class="config-grid">
+              <div class="row wide"><label for="topTextInput">Top text, up to 6 letters</label><input id="topTextInput" type="text" maxlength="6" value="Light" autocomplete="off" /></div>
+
+              <div class="row"><label for="metalSelect">Metal finish</label><select id="metalSelect">
+                <option value="aluminum">Brushed aluminum — included</option>
+                <option value="stainless">Stainless steel — +$4.50</option>
+                <option value="brass">Polished brass — +$6</option>
+                <option value="goldplate">18k gold plated — +$11</option>
+                <option value="rosegold">Rose gold plated — +$12</option>
+                <option value="blacksteel">Black steel — +$5.50</option>
+                <option value="ceramic">White ceramic — +$7.50</option>
+                <option value="carbonfiber">Carbon fiber — +$9</option>
+                <option value="titanium">Titanium — +$14.50</option>
+                <option value="sterling">Sterling silver — +$18</option>
+              </select></div>
+
+              <div class="row"><label for="shellSelect">Shell material</label><select id="shellSelect">
+                <option value="resin">Smooth resin shell — included</option>
+                <option value="recycled">Recycled polymer shell — +$0.50</option>
+                <option value="aluminumShell">Thin aluminum shell — +$1.25</option>
+                <option value="polycarbonate">Clear polycarbonate shell — +$1.00</option>
+                <option value="softtouch">Soft-touch coated shell — +$0.75</option>
+                <option value="carbonBlend">Carbon-fiber blend shell — +$2.25</option>
+              </select></div>
+
+              <div class="row wide"><label for="bodyColorInput">Body color</label><input id="bodyColorInput" type="color" value="#111111" /></div>
+            </div>
+            <div class="material-preview-grid" aria-label="Material preview examples">
+              <div class="material-card brushed"><strong>Brushed metal</strong><span>Directional streaks make aluminum and titanium feel machined.</span></div>
+              <div class="material-card carbon"><strong>Carbon option</strong><span>Subtle woven texture for carbon-fiber shell builds.</span></div>
+              <div class="material-card clear"><strong>Clear shell</strong><span>Transparent finish suggests polycarbonate over the inner stack.</span></div>
+            </div>
+          </section>
+
+          <section class="config-step" data-config-step="core">
+            <div class="section-title">
+              <h2>Core Tech</h2>
+              <p>Choose the glow chemistry, cartridge capacity, and smart tracker module.</p>
+            </div>
+            <div class="config-grid">
+              <div class="row wide"><label for="glowColorSelect">Glow color</label><select id="glowColorSelect">
+                <option value="blue">Electric blue — included</option>
+                <option value="cyan">Cyan — +$0.35</option>
+                <option value="green">Neon green — +$0.35</option>
+                <option value="purple">Violet — +$0.50</option>
+                <option value="pink">Hot pink — +$0.50</option>
+                <option value="amber">Amber — +$0.35</option>
+              </select>
+              <div id="glowSwatches" class="glow-swatches" aria-label="Glow color swatches">
+                <button type="button" class="glow-swatch" data-glow="blue" style="--swatch:#0048ff" aria-label="Electric blue glow"></button>
+                <button type="button" class="glow-swatch" data-glow="cyan" style="--swatch:#00d9ff" aria-label="Cyan glow"></button>
+                <button type="button" class="glow-swatch" data-glow="green" style="--swatch:#38ff4f" aria-label="Neon green glow"></button>
+                <button type="button" class="glow-swatch" data-glow="purple" style="--swatch:#8a35ff" aria-label="Violet glow"></button>
+                <button type="button" class="glow-swatch" data-glow="pink" style="--swatch:#ff3bd4" aria-label="Hot pink glow"></button>
+                <button type="button" class="glow-swatch" data-glow="amber" style="--swatch:#ffa000" aria-label="Amber glow"></button>
+              </div>
+              <button type="button" id="darkPreviewButton" class="dark-preview-toggle">Preview glow in the dark</button></div>
+
+              <div class="row"><label for="extraCartridgesInput">Extra glow cartridges</label><input id="extraCartridgesInput" type="number" min="0" max="8" value="0" /></div>
+              <div class="row"><label>Core features</label>
+                <div class="check"><span>Add Glow cartridge system</span><input id="glowFeatureInput" type="checkbox" /></div>
+                <div class="check"><span>Add Tracker app + rear module</span><input id="trackerFeatureInput" type="checkbox" /></div>
+              </div>
+            </div>
+            <div class="copy-card">
+              <h3>Cleaner customer explanation</h3>
+              <p>A stabilized glow-fluid blend carries fluorescein and fine silica-coated strontium aluminate phosphor through sealed micro-feed paths, so color changes are easy to preview before you build.</p>
+            </div>
+          </section>
+
+          <section class="config-step" data-config-step="finish">
+            <div class="section-title">
+              <h2>Finish</h2>
+              <p>Choose the presentation pieces and review the real engineering stack behind the concept.</p>
+            </div>
+            <div class="config-grid">
+              <div class="row wide"><label>Accessories</label>
+                <div class="check"><span>Protective display case</span><input id="caseInput" type="checkbox" /></div>
+              </div>
+            </div>
+            <div class="parts" aria-label="Included engineering stack">
+              <h3>Included engineering stack</h3>
+              <div class="part"><strong>6061-T6 Aluminum Rods</strong><span>Machined chassis structure for a light, rigid body.</span></div>
+              <div class="part"><strong>316L Stainless Steel Capillary Tubing</strong><span>Corrosion-resistant micro-feed tubes.</span></div>
+              <div class="part"><strong>Bi-Sn-In Fusible Alloy Ingots</strong><span>Eternal-pencil style writing-tip material.</span></div>
+              <div class="part"><strong>Stabilized Glow Fluid</strong><span class="chem">Distilled water, glycerin, citric acid, Polysorbate 20, fluorescein, and ≤ 5 μm silica-coated SrAl₂O₄:Eu,Dy powder.</span></div>
+              <div class="part"><strong>PTFE Tubes + FVMQ O-Rings</strong><span>Low-friction routing with chemically resistant seals.</span></div>
+              <div class="part"><strong>FR-4 BLE PCBA + PC Covers</strong><span>Tracker electronics and protective covers.</span></div>
+            </div>
+            <div class="validation-note">Concept prototype. Material behavior, glow performance, writing-life estimates, and tracker range need lab validation before any commercial claim or real checkout.</div>
+          </section>
+
+          <section class="config-step" data-config-step="review">
+            <div class="section-title">
+              <h2>Review</h2>
+              <p>Confirm the configuration before the mock packing animation.</p>
+            </div>
+            <div class="review-card">
+              <h3>What you’re building</h3>
+              <p id="reviewCopy">A custom Infini Pen build with live-selected materials, glow system options, and optional BLE tracking.</p>
+            </div>
+            <div class="breakdown" id="priceBreakdown"></div>
+            <div class="validation-note">Demo only — no payment is collected. Engineering details are presented as a concept stack and should be tested before real product use.</div>
+          </section>
+        </div>
+
+        <div id="builderNav" class="builder-nav">
+          <button id="prevStepButton" class="secondary" type="button">Previous</button>
+          <button id="nextStepButton" class="primary" type="button">Next step</button>
+          <button id="mockCheckoutButton" class="primary review-only" type="button">Review and pack mock order</button>
+          <button id="resetBuildButton" class="secondary" type="button">Reset build</button>
+          <button id="closeShopButton2" class="secondary" type="button">Back to model</button>
+        </div>
+      </div>
+
+      <aside class="shop-preview" aria-label="Live 3D preview">
+        <div class="preview-guide">
+          <div class="eyebrow">Live 3D preview</div>
+          <h2>Your pen stays on the right.</h2>
+          <p>Drag anywhere on this side to orbit the smaller preview while you customize the build on the left.</p>
+        </div>
+        <div class="preview-card">
+          <div class="eyebrow">Current build</div>
+          <div id="previewTotal" class="price">$9.75</div>
+          <p id="previewSpec" class="fine">Brushed aluminum · Smooth resin shell · Electric blue glow</p>
+          <div id="previewChips" class="preview-chips"></div>
+          <div class="trust-row"><span>Mock checkout</span><span>Small-batch QC</span><span>Live preview</span></div>
+          <div class="validation-note">Concept specs shown for prototyping; final materials and performance require testing.</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="checkoutScene" class="checkout" aria-hidden="true">
+    <button id="closeCheckoutButton" class="checkout-close">Back to model</button>
+    <div class="stage">
+      <div class="checkout-panel">
+        <div class="eyebrow">Mock order flow</div>
+        <h1>Order confirmed</h1>
+        <p id="checkoutStatus">Preparing your custom Infini Pen...</p>
+        <div class="checkout-steps" aria-label="Packing steps">
+          <div class="checkout-step">Build reviewed and priced</div>
+          <div class="checkout-step">Pen placed in foam display case</div>
+          <div class="checkout-step">Engineering stack verified</div>
+          <div class="checkout-step">Shipping label created</div>
+        </div>
+        <div id="checkoutSummary" class="checkout-summary"></div>
+        <div id="checkoutFinalCard" class="final-card"><strong>Mock order packed.</strong><span>Your selected build summary is ready. You can edit the build or return home.</span></div>
+        <p class="fine">Demo only — no payment is collected and no real order is placed. Material and performance claims require validation.</p>
+        <div class="checkout-actions"><button id="editBuildButton" class="secondary" type="button">Edit build</button><button id="homeButton" class="primary" type="button">Back home</button></div>
+      </div>
+      <div class="checkout-theater">
+        <div class="case"><div class="foam"></div><div id="checkoutPen" class="case-pen"></div><div id="checkoutAddons" class="addons"></div></div>
+        <div class="shipping"><div class="box">Infini Pen</div><div class="truck">🚚</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+  <script type="importmap">
+    {"imports":{"three":"https://unpkg.com/three@0.164.1/build/three.module.js","three/addons/":"https://unpkg.com/three@0.164.1/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+    const $ = id => document.getElementById(id);
+    const ui = {
+      mount:$("scene"), cap:$("capButton"), tip:$("tipButton"), glow:$("glowButton"), tracker:$("trackerButton"), parts:$("partsButton"), buy:$("buyButton"),
+      fact:$("factBubble"), shop:$("shopPage"), closeShop:$("closeShopButton"), checkout:$("checkoutScene"), closeCheckout:$("closeCheckoutButton"),
+      checkoutPen:$("checkoutPen"), checkoutAddons:$("checkoutAddons"), checkoutStatus:$("checkoutStatus"), checkoutBtn:$("mockCheckoutButton"), resetBuild:$("resetBuildButton"), checkoutSummary:$("checkoutSummary"),
+      prevStep:$("prevStepButton"), nextStep:$("nextStepButton"), builderNav:$("builderNav"), darkPreview:$("darkPreviewButton"), reviewCopy:$("reviewCopy"), editBuild:$("editBuildButton"), homeButton:$("homeButton"), finalCard:$("checkoutFinalCard"),
+      topText:$("topTextInput"), metal:$("metalSelect"), shell:$("shellSelect"), glowColor:$("glowColorSelect"), bodyColor:$("bodyColorInput"),
+      cartridges:$("extraCartridgesInput"), caseInput:$("caseInput"), glowFeature:$("glowFeatureInput"), trackerFeature:$("trackerFeatureInput"),
+      breakdown:$("priceBreakdown"), total:$("shopTotalBig"), previewTotal:$("previewTotal"), previewSpec:$("previewSpec"), previewChips:$("previewChips"), closeShop2:$("closeShopButton2")
+    };
+    const buyStepButtons = Array.from(document.querySelectorAll(".buy-step"));
+    const configSteps = Array.from(document.querySelectorAll(".config-step"));
+    const glowSwatches = Array.from(document.querySelectorAll(".glow-swatch"));
+    let currentShopStep = 0;
+    let darkPreview = false;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x3a3a3a);
+    const camera = new THREE.PerspectiveCamera(34, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(3.25,1.25,10.2);
+
+    const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-performance"});
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    ui.mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = .18; controls.rotateSpeed = .32; controls.panSpeed = .24; controls.zoomSpeed = .24;
+    controls.minDistance = 2.1; controls.maxDistance = 22; controls.target.set(0,.42,0);
+
+
+    function makeCanvasTexture(draw, repeatX=1, repeatY=1){
+      const c=document.createElement("canvas"); c.width=c.height=256;
+      const x=c.getContext("2d"); draw(x,c.width,c.height);
+      const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace;
+      tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(repeatX,repeatY);
+      return tex;
+    }
+    const proceduralTextures={
+      brushed:makeCanvasTexture((x,w,h)=>{ const g=x.createLinearGradient(0,0,w,0); g.addColorStop(0,"#7c848c"); g.addColorStop(.5,"#f2f5f7"); g.addColorStop(1,"#6d747c"); x.fillStyle=g; x.fillRect(0,0,w,h); for(let i=0;i<w;i+=5){x.fillStyle=`rgba(255,255,255,${i%13===0?.28:.09})`; x.fillRect(i,0,1,h);} },5,1),
+      carbon:makeCanvasTexture((x,w,h)=>{ x.fillStyle="#080808"; x.fillRect(0,0,w,h); for(let y=-w;y<h;y+=20){ for(let i=-w;i<w;i+=40){ x.fillStyle="rgba(255,255,255,.13)"; x.fillRect(i+y,y,24,8); x.fillStyle="rgba(0,0,0,.35)"; x.fillRect(i+y+24,y,16,8); }} for(let y=0;y<h+w;y+=20){ for(let i=-w;i<w;i+=40){ x.fillStyle="rgba(255,255,255,.08)"; x.fillRect(i-y,y,24,8); }} },3,6),
+      soft:makeCanvasTexture((x,w,h)=>{ x.fillStyle="#6b6b6b"; x.fillRect(0,0,w,h); for(let i=0;i<2200;i++){ const v=Math.random()*255|0; x.fillStyle=`rgba(${v},${v},${v},.05)`; x.fillRect(Math.random()*w,Math.random()*h,1,1);} },2,2),
+      ceramic:makeCanvasTexture((x,w,h)=>{ const g=x.createRadialGradient(w*.35,h*.25,5,w*.5,h*.5,w*.7); g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#d9d4c8"); x.fillStyle=g; x.fillRect(0,0,w,h); },2,2)
+    };
+
+    const mat = {
+      body:new THREE.MeshPhysicalMaterial({color:0x111111, roughness:.28, metalness:.18, clearcoat:1, clearcoatRoughness:.18}),
+      body2:new THREE.MeshPhysicalMaterial({color:0x202020, roughness:.36, metalness:.12, clearcoat:.75, clearcoatRoughness:.2}),
+      dark:new THREE.MeshStandardMaterial({color:0x080808, roughness:.52, metalness:.08}),
+      metal:new THREE.MeshPhysicalMaterial({color:0xcfd3d6, roughness:.18, metalness:.9, clearcoat:1, clearcoatRoughness:.08}),
+      metalDark:new THREE.MeshPhysicalMaterial({color:0x7e8790, roughness:.26, metalness:.85, clearcoat:.8, clearcoatRoughness:.13}),
+      graphite:new THREE.MeshPhysicalMaterial({color:0x242424, roughness:.26, metalness:.38, clearcoat:.45, clearcoatRoughness:.18}),
+      glass:new THREE.MeshStandardMaterial({color:0x1a6dff, roughness:.18, metalness:0, transparent:true, opacity:.22}),
+      glow:new THREE.MeshStandardMaterial({color:0x0048ff, emissive:0x003cff, emissiveIntensity:1.15, roughness:.18, metalness:0}),
+      tracker:new THREE.MeshStandardMaterial({color:0x08090c, roughness:.28, metalness:.35}),
+      trackerBlue:new THREE.MeshStandardMaterial({color:0x00aaff, emissive:0x008cff, emissiveIntensity:1.6, roughness:.18, metalness:.05}),
+      seal:new THREE.MeshStandardMaterial({color:0x7fc7d9, roughness:.38, metalness:.02}),
+      ptfe:new THREE.MeshStandardMaterial({color:0xf7f7ed, roughness:.42, metalness:0}),
+      cutawayWindow:new THREE.MeshStandardMaterial({color:0x060606, roughness:.6, metalness:.02}),
+      cutawayLabel:new THREE.MeshBasicMaterial({color:0xf5d27b})
+    };
+
+    const pen = new THREE.Group();
+    scene.add(pen);
+
+    function cyl(g, rt, rb, h, seg, material, x=0,y=0,z=0, open=false) {
+      const geo = new THREE.CylinderGeometry(rt, rb, h, Math.min(seg,56), 1, open);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x,y,z); mesh.castShadow = mesh.receiveShadow = true; g.add(mesh); return mesh;
+    }
+    function ring(g,y,r,t,material=mat.metal,seg=56){ return cyl(g,r,r,t,seg,material,0,y,0); }
+    function roundedBox(w,h,d,r,segs){
+      const s = new THREE.Shape(), x=-w/2, y=-h/2;
+      s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r);
+      s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      s.lineTo(x+r,y+h); s.quadraticCurveTo(x,y+h,x,y+h-r);
+      s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y);
+      const geo = new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:true,bevelThickness:r*.36,bevelSize:r*.36,bevelSegments:segs,curveSegments:segs});
+      geo.center(); return geo;
+    }
+    // Raised grip geometry removed for a smoother, glitch-free shell.
+
+    const bodyRadius=.355, barrelLength=5.95;
+    cyl(pen,bodyRadius,bodyRadius,barrelLength,112,mat.body,0,-.55,0);
+    const capStopBand = new THREE.Group(); pen.add(capStopBand);
+    // Visible stop ring: placed just below the cap mouth so it stays visible whether capped or uncapped.
+    ring(capStopBand,1.305,bodyRadius+.012,.032);
+    ring(capStopBand,1.245,bodyRadius+.004,.014,mat.metalDark);
+    ring(pen,-3.22,bodyRadius+.006,.028); cyl(pen,bodyRadius,bodyRadius,.22,112,mat.metal,0,-3.64,0);
+    cyl(pen,bodyRadius*.98,bodyRadius*.98,.035,112,mat.metalDark,0,-3.782,0);
+    // Clean solid exterior: no raised grip ridges.
+
+    const trackerModule = new THREE.Group(); trackerModule.position.set(0,-3.82,0); pen.add(trackerModule);
+    cyl(trackerModule,bodyRadius*.58,bodyRadius*.58,.026,72,mat.tracker,0,-.012,0);
+    const trackerLens = cyl(trackerModule,bodyRadius*.32,bodyRadius*.32,.031,72,mat.trackerBlue,0,-.033,0);
+    cyl(trackerModule,bodyRadius*.08,bodyRadius*.08,.036,36,mat.body,bodyRadius*.2,-.055,bodyRadius*.08);
+    ring(trackerModule,-.049,bodyRadius*.43,.012,mat.metal,72);
+
+    const trackerApp = new THREE.Group(); trackerApp.visible=false; trackerApp.position.set(.9,-3.28,.72); trackerApp.rotation.set(-.1,-.35,.02); pen.add(trackerApp);
+    trackerApp.add(new THREE.Mesh(roundedBox(.58,.98,.055,.08,12), mat.tracker));
+    const screen = new THREE.Mesh(roundedBox(.5,.84,.022,.055,10), new THREE.MeshBasicMaterial({color:0x10243a})); screen.position.z=.045; trackerApp.add(screen);
+    const appDot = new THREE.Mesh(new THREE.CircleGeometry(.07,36), new THREE.MeshBasicMaterial({color:0x00aaff})); appDot.position.set(0,.1,.058); trackerApp.add(appDot);
+
+    const glowCutaway = new THREE.Group(); glowCutaway.position.set(0,-.72,0); glowCutaway.visible=false; pen.add(glowCutaway);
+    const cavity = new THREE.Group(); cavity.position.set(0,-.72,bodyRadius+.006); cavity.visible=false; pen.add(cavity);
+    [{w:.54,h:.08,x:0,y:1.29},{w:.54,h:.08,x:0,y:-1.29},{w:.07,h:2.48,x:-.285,y:0},{w:.07,h:2.48,x:.285,y:0}].forEach(p=>{
+      const m=new THREE.Mesh(roundedBox(p.w,p.h,.05,.035,8), mat.dark); m.position.set(p.x,p.y,.018); cavity.add(m);
+    });
+    const cartridgeZ = bodyRadius*.68;
+    cyl(glowCutaway,.125,.125,2.38,64,mat.glass,0,0,cartridgeZ);
+    const glowCore = cyl(glowCutaway,.118,.118,2.16,64,mat.glow,0,0,cartridgeZ);
+    cyl(glowCutaway,.136,.136,.09,64,mat.metal,0,1.22,cartridgeZ); cyl(glowCutaway,.136,.136,.09,64,mat.metal,0,-1.22,cartridgeZ);
+    const liquid = cyl(glowCutaway,.122,.122,2.08,64,mat.glow,0,0,cartridgeZ+.006);
+    liquid.scale.z=1.32;
+    const glowHaloMat = new THREE.MeshBasicMaterial({color:0x006dff, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false});
+    const glowHalo = cyl(glowCutaway,.19,.19,2.2,64,glowHaloMat,0,0,cartridgeZ+.012,true);
+    const beads=[]; for(let i=0;i<22;i++){ const b=new THREE.Mesh(new THREE.SphereGeometry(.035+(i%4)*.009,18,12), mat.glow); b.userData={baseY:-1+i*.096,phase:i*.72,radius:.06+(i%5)*.008}; b.position.set(0,b.userData.baseY,cartridgeZ); glowCutaway.add(b); beads.push(b); }
+
+    const glowLight = new THREE.PointLight(0x006dff,0,4.6); glowLight.position.set(0,-.72,bodyRadius*1.08); scene.add(glowLight);
+    const panel = new THREE.Group(); panel.position.set(0,-.72,bodyRadius+.023); panel.visible=false; pen.add(panel);
+    panel.add(new THREE.Mesh(roundedBox(.54,2.62,.055,.11,14), mat.body));
+    const panelTop=ring(panel,1.35,bodyRadius*.98,.018); panelTop.rotation.z=Math.PI/2;
+    const panelBot=ring(panel,-1.35,bodyRadius*.98,.018); panelBot.rotation.z=Math.PI/2;
+
+    const tipGroup=new THREE.Group(); tipGroup.position.set(0,2.42,0); pen.add(tipGroup);
+    cyl(tipGroup,bodyRadius*.74,bodyRadius*.98,.24,96,mat.metal,0,.08,0);
+    cyl(tipGroup,bodyRadius*.4,bodyRadius*.74,.32,96,mat.body2,0,.36,0);
+    cyl(tipGroup,bodyRadius*.15,bodyRadius*.4,.28,96,mat.metal,0,.66,0);
+    const nib=cyl(tipGroup,.022,bodyRadius*.15,.3,72,mat.graphite,0,.95,0); nib.name="everlastingNib";
+
+    const cap=new THREE.Group(), capOn=new THREE.Vector3(0,2.43,0), capOff=new THREE.Vector3(0,4.82,0);
+    cap.position.copy(capOn); pen.add(cap);
+    const capLength=2.05, capRadius=bodyRadius;
+    // Slight machined taper: the cap mouth is subtly fuller, the crown slightly slimmer.
+    cyl(cap,capRadius*.948,capRadius*1.018,capLength,112,mat.body,0,0,0);
+    const topY=capLength/2+.04;
+    cyl(cap,capRadius*.932,capRadius*.97,.08,112,mat.body2,0,topY,0);
+    cyl(cap,capRadius*.76,capRadius*.90,.075,112,mat.dark,0,topY+.072,0);
+    ring(cap,topY-.045,capRadius*.94,.018,mat.metalDark);
+
+    const txtCanvas=document.createElement("canvas"); txtCanvas.width=txtCanvas.height=512;
+    const ctx=txtCanvas.getContext("2d"); const txtTex=new THREE.CanvasTexture(txtCanvas); txtTex.colorSpace=THREE.SRGBColorSpace;
+    function updateTopText(v){
+      const clean=String(v??"").replace(/[^a-z0-9]/gi,"").slice(0,6);
+      ctx.clearRect(0,0,512,512); ctx.fillStyle=ui.bodyColor.value||"#111111"; ctx.beginPath(); ctx.arc(256,256,246,0,Math.PI*2); ctx.fill();
+      const c=new THREE.Color(ui.bodyColor.value||"#111111"); const lum=c.r*.2126+c.g*.7152+c.b*.0722;
+      const textColor=lum<.45?"#e9e9e9":"#171717", shade=lum<.45?"rgba(0,0,0,.72)":"rgba(0,0,0,.28)", hi=lum<.45?"rgba(255,255,255,.24)":"rgba(255,255,255,.5)";
+      ctx.font=clean.length>4?"bold 96px Inter, Arial":"bold 118px Inter, Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      if(clean){
+        // Faux engraved depth: dark lower-right bite, pale upper-left bevel, then recessed letter face.
+        ctx.fillStyle=shade; ctx.fillText(clean,262,264);
+        ctx.fillStyle=hi; ctx.fillText(clean,251,249);
+        ctx.save(); ctx.shadowColor=shade; ctx.shadowBlur=8; ctx.shadowOffsetX=2; ctx.shadowOffsetY=3; ctx.fillStyle=textColor; ctx.fillText(clean,256,258); ctx.restore();
+      }
+      txtTex.needsUpdate=true;
+      if(ui.topText.value.replace(/[^a-z0-9]/gi,"").slice(0,6)!==clean) ui.topText.value=clean;
+    }
+    updateTopText("Light");
+    const engravedCup = new THREE.Mesh(new THREE.CircleGeometry(capRadius*.79,96), mat.dark);
+    engravedCup.rotation.x=-Math.PI/2; engravedCup.position.set(0,topY+.107,0); cap.add(engravedCup);
+    const topFace=new THREE.Mesh(new THREE.CircleGeometry(capRadius*.735,96), new THREE.MeshBasicMaterial({map:txtTex,transparent:true,side:THREE.DoubleSide}));
+    topFace.rotation.x=-Math.PI/2; topFace.position.set(0,topY+.112,0); cap.add(topFace);
+    const capMouth = new THREE.Group(); cap.add(capMouth);
+    // A clean cap-mouth seam plus one FVMQ-colored gasket line: no doubled metal-band stack when closed.
+    ring(capMouth,-1.028,capRadius*.995,.024,mat.dark);
+    ring(capMouth,-.992,capRadius*.955,.014,mat.seal);
+    ring(capMouth,-.958,capRadius*.922,.014,mat.body2);
+    ring(cap,.84,capRadius*.955,.02); ring(cap,.98,capRadius*.925,.016,mat.metalDark);
+
+    const capCutaway = new THREE.Group(); capCutaway.visible=false; cap.add(capCutaway);
+    const cutSlot=new THREE.Mesh(roundedBox(.53,1.22,.052,.085,12), mat.cutawayWindow);
+    cutSlot.position.set(0,-.08,capRadius+.034); capCutaway.add(cutSlot);
+    // Exposed service path: twin 316L capillary tubes, a PTFE liner, and FVMQ sealing rings.
+    const tubeLeft=cyl(capCutaway,.018,.018,1.05,28,mat.metal, -.105,-.08,capRadius+.081); tubeLeft.rotation.z=Math.PI/2;
+    const tubeRight=cyl(capCutaway,.018,.018,1.05,28,mat.metal,.105,-.08,capRadius+.081); tubeRight.rotation.z=Math.PI/2;
+    const ptfeLiner=cyl(capCutaway,.036,.036,.92,36,mat.ptfe,0,-.08,capRadius+.088); ptfeLiner.rotation.z=Math.PI/2;
+    const sealA=ring(capCutaway,-.62,.168,.018,mat.seal,48); sealA.rotation.x=Math.PI/2; sealA.position.z=capRadius+.092;
+    const sealB=ring(capCutaway,.47,.168,.018,mat.seal,48); sealB.rotation.x=Math.PI/2; sealB.position.z=capRadius+.092;
+
+    const clip=new THREE.Group(); clip.position.set(0,-.05,capRadius+.004); cap.add(clip);
+    const anchor=new THREE.Mesh(roundedBox(.31,.3,.115,.055,10), mat.metal); anchor.position.set(0,.79,.04); clip.add(anchor);
+    const clipPlate=new THREE.Mesh(new THREE.BoxGeometry(.2,1.62,.032), mat.metal); clipPlate.position.set(0,-.05,.13); clip.add(clipPlate);
+    const lip=new THREE.Mesh(roundedBox(.175,.17,.06,.04,8), mat.metalDark); lip.position.set(0,-.88,.205); lip.rotation.x=-.16; clip.add(lip);
+
+    scene.add(new THREE.HemisphereLight(0xffffff,0x2f2f2f,2.45));
+    const key=new THREE.DirectionalLight(0xffffff,2.95); key.position.set(4.8,7.8,7.8); scene.add(key);
+    const rim=new THREE.DirectionalLight(0xffffff,1.45); rim.position.set(-5.5,4.5,-4.5); scene.add(rim);
+    const glint=new THREE.PointLight(0xffe0a3,6.2,16); glint.position.set(2.8,2.2,5.2); scene.add(glint);
+    const fill=new THREE.PointLight(0xffffff,4.5,18); fill.position.set(-3,.5,6); scene.add(fill);
+    const defaultLighting={exposure:1.08,key:2.95,rim:1.45,glint:6.2,fill:4.5,hemi:2.45};
+
+    let capOpen=false, glowOpen=false, trackerOpen=false, partsOpen=false, productTracker=true, cameraAnimating=false, checkoutTimers=[];
+    const clock=new THREE.Clock();
+    const homePos=new THREE.Vector3(3.25,1.25,10.2), homeTar=new THREE.Vector3(0,.42,0);
+    const tipPos=new THREE.Vector3(1.05,3.45,2.28), tipTar=new THREE.Vector3(0,3.45,0);
+    const glowPos=new THREE.Vector3(1.15,-.58,2.55), glowTar=new THREE.Vector3(0,-.72,.34);
+    const trackerPos=new THREE.Vector3(1.05,-3.72,2.05), trackerTar=new THREE.Vector3(0,-3.82,0);
+    const capTextPos=new THREE.Vector3(1.16,4.15,2.38), capTextTar=new THREE.Vector3(0,3.55,0);
+    // Buy screen camera: shift the pen into the open right-side preview space.
+    const shopPos=new THREE.Vector3(1.55,1.18,9.2), shopTar=new THREE.Vector3(-1.85,.42,0);
+    const shopGlowPos=new THREE.Vector3(.35,-.58,2.95), shopGlowTar=new THREE.Vector3(-1.15,-.72,.34);
+    const shopTrackerPos=new THREE.Vector3(.25,-3.72,2.45), shopTrackerTar=new THREE.Vector3(-1.05,-3.82,0);
+    const shopCapTextPos=new THREE.Vector3(.35,4.15,2.75), shopCapTextTar=new THREE.Vector3(-1.05,3.55,0);
+    const desiredPos=homePos.clone(), desiredTar=homeTar.clone();
+    function moveCameraTo(p,t){ desiredPos.copy(p); desiredTar.copy(t); cameraAnimating=true; }
+    function showFacts(html){ ui.fact.innerHTML=html; ui.fact.classList.add("visible"); }
+    function showParts(){
+      partsOpen=true; ui.parts.textContent="Hide parts";
+      capOpen=false; ui.cap.textContent="Take cap off";
+      closeShop();
+      const list=materialSpecs.map(([name,use])=>`<p><strong>${name}</strong><br>${use}</p>`).join("");
+      showFacts(`<h2>Newest engineering parts</h2>${list}<p><strong>How it fits together</strong><br>The 6061-T6 chassis carries the main structure, 316L capillary tubing routes the feed path, PTFE tubing and FVMQ O-rings handle sealing, the Bi-Sn-In alloy forms the eternal-pencil tip, the stabilized glow blend carries fluorescein and SrAl₂O₄:Eu,Dy powder, and the FR-4 BLE PCBA adds tracker electronics under a PC cover.</p>`);
+      moveCameraTo(homePos,homeTar);
+    }
+    function closeParts(){ partsOpen=false; ui.parts.textContent="Parts"; capCutaway.visible=false; }
+    function setDarkPreview(on){
+      darkPreview=!!on;
+      document.body.classList.toggle("dark-glow-preview", darkPreview);
+      scene.background.setHex(darkPreview?0x05070c:0x3a3a3a);
+      renderer.toneMappingExposure=darkPreview?.78:defaultLighting.exposure;
+      key.intensity=darkPreview?1.15:defaultLighting.key;
+      rim.intensity=darkPreview?.55:defaultLighting.rim;
+      glint.intensity=darkPreview?1.3:defaultLighting.glint;
+      fill.intensity=darkPreview?.75:defaultLighting.fill;
+      if(ui.darkPreview) ui.darkPreview.textContent=darkPreview?"Exit dark glow preview":"Preview glow in the dark";
+    }
+    function closeGlow(){ glowOpen=false; ui.glow.textContent="Glow"; if(darkPreview) setDarkPreview(false); }
+    function closeTracker(){ trackerOpen=false; ui.tracker.textContent="Tracker"; }
+    function setShopStep(index){
+      currentShopStep=Math.max(0,Math.min(configSteps.length-1,index));
+      configSteps.forEach((el,i)=>el.classList.toggle("active",i===currentShopStep));
+      buyStepButtons.forEach((btn,i)=>{ btn.classList.toggle("active",i===currentShopStep); btn.classList.toggle("complete",i<currentShopStep); });
+      if(ui.prevStep) ui.prevStep.disabled=currentShopStep===0;
+      if(ui.builderNav) ui.builderNav.classList.toggle("review",currentShopStep===configSteps.length-1);
+      if(currentShopStep===0) focusShopPart("body");
+      if(currentShopStep===1) focusShopPart("glow");
+      if(currentShopStep===2) focusShopPart("body");
+      if(currentShopStep===3) focusShopPart("body");
+    }
+    function inShopMode(){ return document.body.classList.contains("shop-mode"); }
+    function focusShopPart(part){
+      if(!inShopMode()) return;
+      ui.fact.classList.remove("visible");
+      closeParts();
+      if(part==="capText"){
+        closeGlow(); closeTracker();
+        capOpen=false; ui.cap.textContent="Take cap off";
+        moveCameraTo(shopCapTextPos,shopCapTextTar);
+      } else if(part==="glow"){
+        closeTracker();
+        glowOpen=true; ui.glow.textContent="Close glow";
+        moveCameraTo(shopGlowPos,shopGlowTar);
+      } else if(part==="tracker"){
+        closeGlow();
+        trackerOpen=true; ui.tracker.textContent="Close tracker";
+        moveCameraTo(shopTrackerPos,shopTrackerTar);
+      } else {
+        closeGlow(); closeTracker();
+        capOpen=false; ui.cap.textContent="Take cap off";
+        moveCameraTo(shopPos,shopTar);
+      }
+    }
+
+    const pricing={
+      base:9.75, engraving:1.5, bodyColor:2.25, case:4.5, glowSystem:6.5, tracker:8.5, cartridge:1.88,
+      shells:{resin:["Smooth resin shell",0,.2,.02,1], recycled:["Recycled polymer shell",.5,.32,.01,.65], aluminumShell:["Thin aluminum shell",1.25,.2,.28,.8], polycarbonate:["Clear polycarbonate shell",1,.08,0,1], softtouch:["Soft-touch coated shell",.75,.55,0,.2], carbonBlend:["Carbon-fiber blend shell",2.25,.3,.08,.75]},
+      glowColors:{blue:["Electric blue",0,0x0048ff,0x003cff,0x006dff], cyan:["Cyan",.35,0x00d9ff,0x00bfff,0x00e5ff], green:["Neon green",.35,0x38ff4f,0x00ff2a,0x70ff7a], purple:["Violet",.5,0x8a35ff,0x7220ff,0x9b5cff], pink:["Hot pink",.5,0xff3bd4,0xff1ec7,0xff67df], amber:["Amber",.35,0xffa000,0xff8c00,0xffbd33]},
+      metals:{aluminum:["Brushed aluminum",0,0xcfd3d6,0x9aa1a8], stainless:["Stainless steel",4.5,0xe2e5e8,0xaeb5bd], brass:["Polished brass",6,0xd5a73d,0x9d721f], goldplate:["18k gold plated",11,0xffd15c,0xb6811f], rosegold:["Rose gold plated",12,0xf0a08c,0xa85f51], blacksteel:["Black steel",5.5,0x151515,0x070707], ceramic:["White ceramic",7.5,0xf8f5ec,0xcfc8b8], carbonfiber:["Carbon fiber",9,0x2d2d2d,0x090909], titanium:["Titanium",14.5,0xaeb3bc,0x6f7682], sterling:["Sterling silver",18,0xf0f2f5,0xb6bec8]}
+    };
+    const materialSpecs=[
+      ["6061-T6 Aluminum Rods","For the machined chassis"],
+      ["316L Stainless Steel Capillary Tubing","For the feed tubes"],
+      ["Bi-Sn-In Fusible Alloy Ingots","For the eternal pencil tips"],
+      ["Stabilized Distilled Water Blend","Water + glycerin + citric acid + Polysorbate 20 + fluorescein"],
+      ["Silica-coated SrAl₂O₄:Eu,Dy Powder","≤ 5 μm glow phosphor"],
+      ["PTFE Extruded Tubes + FVMQ O-Rings","For routing and seals"],
+      ["FR-4 Bluetooth BLE PCBA Modules","With PC covers for the tracker"]
+    ];
+    const money=v=>`$${v.toFixed(2)}`;
+    function setBodyColor(hex){
+      const body=new THREE.Color(hex||"#111111");
+      mat.body.color.copy(body); mat.body2.color.copy(body.clone().lerp(new THREE.Color(0x888888),.12)); mat.dark.color.copy(body.clone().lerp(new THREE.Color(0x555555),.22)); updateTopText(ui.topText.value);
+    }
+    function setMetal(type){
+      const m=pricing.metals[type]||pricing.metals.aluminum;
+      mat.metal.color.setHex(m[2]); mat.metalDark.color.setHex(m[3]);
+      mat.metal.map=null; mat.metal.roughness=.18; mat.metal.metalness=.9; mat.metal.clearcoat=1;
+      if(["aluminum","stainless","titanium","sterling"].includes(type)){ mat.metal.map=proceduralTextures.brushed; mat.metal.roughness=.26; }
+      if(type==="blacksteel"){ mat.metal.roughness=.34; mat.metal.clearcoat=.65; }
+      if(["brass","goldplate","rosegold"].includes(type)){ mat.metal.roughness=.14; mat.metal.clearcoat=1; }
+      if(type==="ceramic"){ mat.metal.map=proceduralTextures.ceramic; mat.metal.metalness=.05; mat.metal.roughness=.22; }
+      if(type==="carbonfiber"){ mat.metal.map=proceduralTextures.carbon; mat.metal.metalness=.42; mat.metal.roughness=.31; }
+      mat.metal.needsUpdate=true; mat.metalDark.needsUpdate=true;
+    }
+    function setShell(type){
+      const s=pricing.shells[type]||pricing.shells.resin;
+      mat.body.map=null; mat.body.transparent=false; mat.body.opacity=1; mat.body.roughness=s[2]; mat.body.metalness=s[3]; mat.body.clearcoat=s[4];
+      if(type==="aluminumShell"){ mat.body.map=proceduralTextures.brushed; mat.body.metalness=.45; mat.body.roughness=.24; }
+      if(type==="polycarbonate"){ mat.body.transparent=true; mat.body.opacity=.56; mat.body.clearcoat=1; mat.body.roughness=.05; mat.body.metalness=0; }
+      if(type==="softtouch"||type==="recycled"){ mat.body.map=proceduralTextures.soft; mat.body.roughness=.68; mat.body.clearcoat=.12; }
+      if(type==="carbonBlend"){ mat.body.map=proceduralTextures.carbon; mat.body.roughness=.33; mat.body.metalness=.12; mat.body.clearcoat=.9; }
+      mat.body.needsUpdate=true; mat.body2.needsUpdate=true;
+    }
+    function setGlowColor(type){
+      const g=pricing.glowColors[type]||pricing.glowColors.blue;
+      mat.glow.color.setHex(g[2]); mat.glow.emissive.setHex(g[3]); mat.glass.color.setHex(g[2]); glowLight.color.setHex(g[4]);
+      if(typeof glowHaloMat!=="undefined"){ glowHaloMat.color.setHex(g[4]); }
+      document.documentElement.style.setProperty("--glowColor", "#"+g[4].toString(16).padStart(6,"0"));
+    }
+    function calc(){
+      const m=pricing.metals[ui.metal.value]||pricing.metals.aluminum, s=pricing.shells[ui.shell.value]||pricing.shells.resin, g=pricing.glowColors[ui.glowColor.value]||pricing.glowColors.blue;
+      const extras=Math.max(0,Math.min(8,Number(ui.cartridges.value)||0));
+      const text=String(ui.topText.value??"").replace(/[^a-z0-9]/gi,"").slice(0,6);
+      const lines=[["Base Infini Pen concept body",pricing.base],["6061-T6 chassis + Bi-Sn-In eternal tip",0],["316L feed tubes + PTFE/FVMQ seals",0],[`Metal finish: ${m[0]}`,m[1]],[`Shell material: ${s[0]}`,s[1]]];
+      if(text && text.toLowerCase()!=="light") lines.push([`Custom top text: ${text}`,pricing.engraving]);
+      if(ui.bodyColor.value.toLowerCase()!=="#111111") lines.push(["Custom body color finish",pricing.bodyColor]);
+      if(ui.caseInput.checked) lines.push(["Protective display case",pricing.case]);
+      if(ui.glowFeature.checked) lines.push(["Glow cartridge system",pricing.glowSystem]);
+      if(ui.glowFeature.checked && g[1]>0) lines.push([`Glow color: ${g[0]}`,g[1]]);
+      if(ui.trackerFeature.checked) lines.push(["Tracker app + rear module",pricing.tracker]);
+      if(extras>0) lines.push([`${extras} extra glow cartridge${extras===1?"":"s"}`,extras*pricing.cartridge]);
+      const subtotal=lines.reduce((a,b)=>a+b[1],0), qc=Math.max(2,subtotal*.12); lines.push(["Small-batch assembly + quality check",qc]);
+      return {lines,total:subtotal+qc,extras,metal:m,shell:s,glow:g};
+    }
+    function update(){
+      updateTopText(ui.topText.value); setBodyColor(ui.bodyColor.value); setMetal(ui.metal.value); setShell(ui.shell.value); setGlowColor(ui.glowColor.value);
+      productTracker=ui.trackerFeature.checked; trackerModule.visible=productTracker||trackerOpen;
+      const c=calc();
+      const totalText=money(c.total);
+      ui.total.textContent=totalText;
+      if(ui.previewTotal) ui.previewTotal.textContent=totalText;
+      ui.breakdown.innerHTML=c.lines.map(l=>`<div class="line"><span>${l[0]}</span><strong>${money(l[1])}</strong></div>`).join("")+`<div class="line total"><span>Estimated total</span><strong>${totalText}</strong></div>`;
+      const text=String(ui.topText.value||"Light").replace(/[^a-z0-9]/gi,"").slice(0,6)||"Light";
+      const chips=[c.metal[0], c.shell[0], `${c.glow[0]} glow`, `${text} cap`];
+      if(ui.caseInput.checked) chips.push("Display case");
+      if(ui.glowFeature.checked) chips.push("Glow system");
+      if(ui.trackerFeature.checked) chips.push("BLE tracker");
+      if(c.extras>0) chips.push(`${c.extras} cartridge${c.extras===1?"":"s"}`);
+      if(ui.previewSpec) ui.previewSpec.textContent=`${c.metal[0]} · ${c.shell[0]} · ${c.glow[0]} glow`;
+      if(ui.previewChips) ui.previewChips.innerHTML=chips.map(x=>`<span class="preview-chip">${x}</span>`).join("");
+      if(ui.reviewCopy) ui.reviewCopy.textContent=`${text} cap · ${c.metal[0]} · ${c.shell[0]} · ${c.glow[0]} glow${ui.trackerFeature.checked?" · BLE tracker":""}${ui.caseInput.checked?" · display case":""}.`;
+      glowSwatches.forEach(btn=>btn.classList.toggle("active", btn.dataset.glow===ui.glowColor.value));
+      if(ui.darkPreview) ui.darkPreview.textContent=darkPreview?"Exit dark glow preview":"Preview glow in the dark";
+    }
+    function openShop(){
+      closeGlow(); closeTracker(); closeParts(); capOpen=false; ui.cap.textContent="Take cap off"; ui.fact.classList.remove("visible");
+      // Keep the user's current build when reopening the shop instead of resetting every choice.
+      update(); document.body.classList.add("shop-mode"); ui.shop.classList.add("visible"); ui.shop.setAttribute("aria-hidden","false"); setShopStep(0); moveCameraTo(shopPos,shopTar);
+    }
+    function closeShop(returnHome=true){
+      document.body.classList.remove("shop-mode"); ui.shop.classList.remove("visible"); ui.shop.setAttribute("aria-hidden","true"); if(darkPreview) setDarkPreview(false); update();
+      if(returnHome) moveCameraTo(homePos,homeTar);
+    }
+    function resetBuild(){
+      ui.topText.value="Light"; ui.metal.value="aluminum"; ui.shell.value="resin"; ui.glowColor.value="blue"; ui.bodyColor.value="#111111";
+      ui.cartridges.value="0"; ui.caseInput.checked=false; ui.glowFeature.checked=false; ui.trackerFeature.checked=false;
+      closeGlow(); closeTracker(); closeParts(); capOpen=false; ui.cap.textContent="Take cap off"; ui.fact.classList.remove("visible");
+      document.body.classList.remove("shop-mode"); if(darkPreview) setDarkPreview(false); setShopStep(0); update(); moveCameraTo(homePos,homeTar);
+    }
+    function closeCheckout(){ checkoutTimers.forEach(clearTimeout); checkoutTimers=[]; ui.checkout.classList.remove("visible","running","final-ready"); ui.checkout.setAttribute("aria-hidden","true"); document.body.classList.remove("shop-mode"); if(darkPreview) setDarkPreview(false); moveCameraTo(homePos,homeTar); }
+    function editBuildFromCheckout(){ closeCheckout(); openShop(); setShopStep(3); }
+    function backHomeFromCheckout(){ closeCheckout(); }
+    function checkout(){
+      closeGlow(); closeTracker(); closeParts(); closeShop(false); ui.fact.classList.remove("visible"); const c=calc();
+      ui.checkoutPen.style.setProperty("--pen-body", ui.bodyColor.value||"#111111");
+      ui.checkoutPen.style.setProperty("--pen-metal", "#"+c.metal[2].toString(16).padStart(6,"0"));
+      const addons=[`${c.shell[0]} shell`,"6061-T6 chassis","316L feed tubes","Bi-Sn-In tip","PTFE/FVMQ seals"];
+      if(ui.caseInput.checked) addons.push("Foam display case");
+      if(ui.glowFeature.checked) addons.push(`${c.glow[0]} glow module`,"SrAl₂O₄:Eu,Dy powder");
+      if(ui.trackerFeature.checked) addons.push("FR-4 BLE PCBA + PC cover");
+      if(c.extras>0) addons.push(`${c.extras} glow cartridge${c.extras===1?"":"s"}`);
+      ui.checkoutAddons.innerHTML=addons.map((a,i)=>`<span class="chip" style="animation-delay:${1.8+i*.18}s">${a.includes("cartridge")?"<span class='cart-spark'></span>":""}${a}</span>`).join("");
+      if(ui.checkoutSummary) ui.checkoutSummary.innerHTML=c.lines.map(l=>`<div class="line"><span>${l[0]}</span><strong>${money(l[1])}</strong></div>`).join("")+`<div class="line total"><span>Mock order total</span><strong>${money(c.total)}</strong></div>`;
+      ui.checkoutStatus.textContent="Reviewing your build and preparing the packing tray..."; ui.checkout.classList.add("visible"); ui.checkout.setAttribute("aria-hidden","false"); ui.checkout.classList.remove("running","final-ready"); void ui.checkout.offsetWidth; ui.checkout.classList.add("running");
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Selected pen body slides into the foam-lined case.",1800));
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Cartridges, tracker module, and display case options are packed if selected.",3300));
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Materials stack verified: chassis, feed tubes, seals, tip, glow, and electronics.",4800));
+      checkoutTimers.push(setTimeout(()=>ui.checkoutStatus.textContent="Case sealed. Shipping label created.",6100));
+      checkoutTimers.push(setTimeout(()=>{ ui.checkoutStatus.textContent="Packed and ready to ship."; ui.checkout.classList.add("final-ready"); },7400));
+    }
+
+    controls.addEventListener("start",()=>cameraAnimating=false);
+    ui.cap.onclick=()=>{ closeGlow(); closeTracker(); closeParts(); capOpen=!capOpen; ui.cap.textContent=capOpen?"Recap the pen":"Take cap off"; if(!capOpen){ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.tip.onclick=()=>{ closeGlow(); closeTracker(); closeParts(); capOpen=true; ui.cap.textContent="Recap the pen"; showFacts(`<h2>Bi-Sn-In eternal tip</h2><p>The newest writing point is based on Bi-Sn-In fusible-alloy ingots, shaped into an eternal-pencil style tip.</p><p>Concept life estimate: about 500,000+ words, or 100–150 miles of line depending on paper and writing pressure.</p>`); moveCameraTo(tipPos,tipTar); };
+    ui.glow.onclick=()=>{ closeTracker(); closeParts(); glowOpen=!glowOpen; ui.glow.textContent=glowOpen?"Close glow":"Glow"; if(glowOpen){showFacts(`<h2>Glow microfluidics</h2><p>A stabilized glow-fluid blend carries fluorescein and fine phosphor through sealed micro-feed paths for a brighter concept preview.</p><p>Engineering stack: distilled water, glycerin, citric acid, Polysorbate 20, fluorescein, ≤ 5 μm silica-coated SrAl₂O₄:Eu,Dy powder, PTFE routing, and FVMQ seals.</p><p><strong>Prototype note:</strong> glow performance and writing life require lab validation.</p>`); moveCameraTo(glowPos,glowTar);} else {ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.tracker.onclick=()=>{ closeGlow(); closeParts(); trackerOpen=!trackerOpen; ui.tracker.textContent=trackerOpen?"Close tracker":"Tracker"; if(trackerOpen){showFacts(`<h2>BLE tracker end</h2><p>The rear module uses an FR-4 Bluetooth BLE PCBA with a protective PC cover, status LED, and companion app concept.</p><p>Concept range: up to 150 ft indoors.</p>`); moveCameraTo(trackerPos,trackerTar);} else {ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar);} };
+    ui.parts.onclick=()=>{ closeGlow(); closeTracker(); if(partsOpen){ closeParts(); ui.fact.classList.remove("visible"); moveCameraTo(homePos,homeTar); } else showParts(); };
+    ui.buy.onclick=openShop; ui.closeShop.onclick=()=>closeShop(true); if(ui.closeShop2) ui.closeShop2.onclick=()=>closeShop(true); ui.closeCheckout.onclick=closeCheckout; ui.checkoutBtn.onclick=checkout; ui.resetBuild.onclick=resetBuild;
+    if(ui.prevStep) ui.prevStep.onclick=()=>setShopStep(currentShopStep-1);
+    if(ui.nextStep) ui.nextStep.onclick=()=>setShopStep(currentShopStep+1);
+    if(ui.darkPreview) ui.darkPreview.onclick=()=>{ setDarkPreview(!darkPreview); if(darkPreview) focusShopPart("glow"); };
+    if(ui.editBuild) ui.editBuild.onclick=editBuildFromCheckout;
+    if(ui.homeButton) ui.homeButton.onclick=backHomeFromCheckout;
+    buyStepButtons.forEach(btn=>btn.addEventListener("click",()=>setShopStep(Number(btn.dataset.stepIndex)||0)));
+    glowSwatches.forEach(btn=>btn.addEventListener("click",()=>{ ui.glowColor.value=btn.dataset.glow; update(); focusShopPart("glow"); }));
+    [ui.topText,ui.metal,ui.shell,ui.glowColor,ui.bodyColor,ui.cartridges,ui.caseInput,ui.glowFeature,ui.trackerFeature].forEach(el=>{el.addEventListener("input",update);el.addEventListener("change",update);});
+    function bindSmartFocus(el, part){
+      if(!el) return;
+      ["focus","input","change"].forEach(type=>el.addEventListener(type,()=>focusShopPart(part)));
+    }
+    bindSmartFocus(ui.topText,"capText");
+    bindSmartFocus(ui.glowColor,"glow");
+    bindSmartFocus(ui.glowFeature,"glow");
+    bindSmartFocus(ui.cartridges,"glow");
+    bindSmartFocus(ui.trackerFeature,"tracker");
+    bindSmartFocus(ui.bodyColor,"body");
+    bindSmartFocus(ui.metal,"body");
+    bindSmartFocus(ui.shell,"body");
+    bindSmartFocus(ui.caseInput,"body");
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const time=clock.getElapsedTime();
+      cap.position.lerp(capOpen?capOff:capOn,.085); cap.rotation.z=THREE.MathUtils.lerp(cap.rotation.z,0,.12); cap.rotation.x=THREE.MathUtils.lerp(cap.rotation.x,0,.12);
+      const capLift = cap.position.distanceTo(capOn);
+      const capSeated = !capOpen && capLift < .22;
+      tipGroup.visible = !capSeated;
+      // Parts mode is information-only now; keep the model visually unchanged in the home view.
+      capStopBand.visible = true;
+      capCutaway.visible = false;
+      const closedZ=bodyRadius+.023, moving=glowOpen||Math.abs(panel.position.z-closedZ)>.025||Math.abs(panel.position.x)>.025||Math.abs(panel.position.y+.72)>.025;
+      panel.visible=moving; glowCutaway.visible=glowOpen; cavity.visible=glowOpen; trackerModule.visible=trackerOpen||productTracker; trackerApp.visible=trackerOpen;
+      trackerLens.material.emissiveIntensity=trackerOpen?2.3+Math.sin(time*4)*.45:1.1;
+      panel.position.z=THREE.MathUtils.lerp(panel.position.z,glowOpen?bodyRadius+1.45:closedZ,.095);
+      panel.position.x=THREE.MathUtils.lerp(panel.position.x,glowOpen?1.45:0,.095);
+      panel.position.y=THREE.MathUtils.lerp(panel.position.y,glowOpen?-.34:-.72,.095);
+      panel.rotation.y=THREE.MathUtils.lerp(panel.rotation.y,glowOpen?-1.12:0,.095);
+      panel.rotation.z=THREE.MathUtils.lerp(panel.rotation.z,glowOpen?-.22:0,.095);
+      const glowTarget=glowOpen?(darkPreview?8.8:5.4):0;
+      glowLight.intensity=THREE.MathUtils.lerp(glowLight.intensity,glowTarget,.08);
+      glowCore.material.emissiveIntensity=THREE.MathUtils.lerp(glowCore.material.emissiveIntensity,glowOpen?(darkPreview?3.4:2.05):.75,.08);
+      liquid.material.emissiveIntensity=glowCore.material.emissiveIntensity;
+      if(typeof glowHaloMat!=="undefined") glowHaloMat.opacity=THREE.MathUtils.lerp(glowHaloMat.opacity,glowOpen?(darkPreview?.38:.22):.05,.08);
+      if(glowOpen) beads.forEach((b,i)=>{ const flow=(b.userData.baseY+time*(darkPreview?.64:.48))%2.1, phase=time*(darkPreview?3.2:2.45)+b.userData.phase; b.position.y=flow-1.05; b.position.x=Math.sin(phase)*b.userData.radius; b.position.z=cartridgeZ+Math.cos(phase*.82)*b.userData.radius*.65; b.scale.setScalar(1+Math.sin(time*3.3+i)*.16); });
+      if(cameraAnimating){ camera.position.lerp(desiredPos,.075); controls.target.lerp(desiredTar,.075); if(camera.position.distanceTo(desiredPos)<.012&&controls.target.distanceTo(desiredTar)<.012){ camera.position.copy(desiredPos); controls.target.copy(desiredTar); cameraAnimating=false; } }
+      controls.update(); renderer.render(scene,camera);
+    }
+    update(); animate();
+    addEventListener("resize",()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,1.35)); });
+  </script>
+</body>
+</html>
